@@ -6,7 +6,7 @@ OBJS=$(subst,$(CXX_SOURCES),.cpp,.o)
 
 LIBRARIES=sdl glu x11 SDL_mixer
 
-CXXFLAGS=-O2 -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -DSOUND -fpermissive \
+CXXFLAGS=-O2 -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpermissive \
 				 $(shell pkg-config --cflags $(LIBRARIES))
 
 LIBS=$(shell pkg-config --libs $(LIBRARIES))

@@ -24,29 +24,21 @@
  *		Visit My Site At nehe.gamedev.net
  */
 
-//#include <windows.h>		// Header File For Windows
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <GL/gl.h>			// Header File For The OpenGL32 Library
 #include <GL/glu.h>			// Header File For The GLu32 Library
-//#include <GL/glaux.h>		// Header File For The Glaux Library
-//#include "bass.h"
-//#include <winsock.h>
 #include <fstream>
 #include <iostream>
 #include <SDL.h>
 #include <sys/time.h>
 #include "Tga.h"
 
-//#define SOUND
-
-#ifdef SOUND
 #include "SDL.h"
 #include "SDL_audio.h"
 #include "SDL_mixer.h"
-#endif
 
 int width = 640;
 int height = 480;
@@ -65,14 +57,21 @@ bool NoMusic=FALSE;
 bool NoSound=FALSE;
 bool NoBlend=TRUE;
 
-#ifdef SOUND
-#define NUM_SOUNDS 16
-struct sample {
-	Uint8 *data;
-	Uint32 dpos;
-	Uint32 dlen;
-} sounds[NUM_SOUNDS];
-#endif
+#define NUM_SOUNDS 10
+enum sounds {
+	aj0,
+	aj1,
+	brinner,
+	broms,
+	farlig,
+	krasch,
+	move,
+	respawn,
+	tut,
+	welcome,
+};
+Mix_Chunk *sound_chunks[NUM_SOUNDS];
+#define SAMPLE_PATH "data/ljud/"
 
 // Iallafall så är stommen för nätverket laggd...
 // Hmmm, det tar sig...
@@ -247,23 +246,48 @@ GLfloat transx=0.0f, transy=0.0f;
 GLfloat Distance=-30.0f, SpeedVar, tmpSpeedVar;
 
 // LjYYYYd.
-void PlaySound(char *file)
-{
-#ifdef SOUND
 
-	Mix_Chunk *sound = NULL;
-
-	sound = Mix_LoadWAV(file);
-	if(sound == NULL) {
+int LoadSample(char *file, enum sounds sound) {
+	sound_chunks[sound] = Mix_LoadWAV(file);
+	if (sound == NULL) {
 		fprintf(stderr, "Unable to load WAV file: %s\n", Mix_GetError());
 	}
-	int channel;
+}
 
-	channel = Mix_PlayChannel(-1, sound, 0);
-	if(channel == -1) {
+int LoadSamples()				// Här loadar vi alla bananiga samples vi ska dra igång...
+{
+	int errors = 0;
+	errors += LoadSample(SAMPLE_PATH "aj.ogg", aj0);
+	errors += LoadSample(SAMPLE_PATH "aj2.ogg", aj1);
+	errors += LoadSample(SAMPLE_PATH "brinner.ogg", brinner);
+	errors += LoadSample(SAMPLE_PATH "broms.ogg", broms);
+	errors += LoadSample(SAMPLE_PATH "farlig.ogg", farlig);
+	errors += LoadSample(SAMPLE_PATH "krasch.ogg", krasch);
+	errors += LoadSample(SAMPLE_PATH "move.ogg", move);
+	errors += LoadSample(SAMPLE_PATH "respawn.ogg", respawn);
+	errors += LoadSample(SAMPLE_PATH "tut.ogg", tut);
+	errors += LoadSample(SAMPLE_PATH "welcome.ogg", welcome);
+
+	return errors;
+}
+
+int PlaySoundChannel(enum sounds sound, int channel)
+{
+	if (sound_chunks[sound] == NULL) {
+		fprintf(stderr, "Sound chunk is not loaded: %d\n", sound);
+	}
+
+	channel = Mix_PlayChannel(channel, sound_chunks[sound], 0);
+	if (channel == -1) {
 		fprintf(stderr, "Unable to play WAV file: %s\n", Mix_GetError());
 	}
-#endif
+
+	return channel;
+}
+
+int PlaySound(enum sounds sound)
+{
+	return PlaySoundChannel(sound, -1);
 }
 
 float CalcMapPlace(int cx,int cy,bool xy)
@@ -298,59 +322,6 @@ char* ensiffrachar(int ensiffraint)
 
 
 
-/*
-   int LoadSamples()				// Här loadar vi alla bananiga samples vi ska dra igång...
-   {
-
-#ifdef SOUND
-
-SMPEG_Info info;
-std::cout << "Kunde skapa en info doning..." << std::endl;
-
-runover = SMPEG_new("data/aj2.mp3",&info,1);
-std::cout << "Kunde ladda ljudet..." << std::endl;
-
-//SMPEG_play( runover );
-std::cout << "Kunde spela ljudet..." << std::endl;
-
-#endif
-// Filer som behöver laddas
- * motorn=BASS_SampleLoad(FALSE,
- "data/engine.ogg",
-
- runover=BASS_SampleLoad(FALSE,
- "data/aj.mp3",
-
- runover2=BASS_SampleLoad(FALSE,
- "data/aj2.mp3",
-
- krasch=BASS_SampleLoad(FALSE,
- "data/krasch.mp3",
-
- welcome=BASS_SampleLoad(FALSE,
- "data/welcome.mp3",
-
- move=BASS_SampleLoad(FALSE,
- "data/move.mp3",
- tut=BASS_SampleLoad(FALSE,
- "data/tut.mp3",
-
- broms=BASS_SampleLoad(FALSE,
- "data/broms.mp3",
-
- brinner=BASS_SampleLoad(FALSE,
- "data/brinner.mp3",
- respawn=BASS_SampleLoad(FALSE,
- "data/respawn.mp3",
-
-
- musiken = BASS_MusicLoad(FALSE,
- "data/farlig.xm",
-
- /
- return 1;
- }
- */
 
 
 
@@ -359,7 +330,6 @@ void glPrint(const char *fmt, ...)					// Custom GL "Print" Routine
 {
 
 }
-
 
 int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 {
@@ -419,8 +389,6 @@ int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 	return status;							// Return The Status
 }
 
-
-
 void TimerInit()								// Initialize Our Timer (Get It Ready)
 {
 }
@@ -429,8 +397,6 @@ float TimerGetTime()								// Get Time In Milliseconds
 {
 	//return( (float) ( timeGetTime() - timer.mm_timer_start) * timer.resolution)*1000.0f;
 }
-
-
 
 void ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
 {
@@ -851,32 +817,17 @@ int RespondToKeys()
 			mbil.Points++;
 
 			if (brinner_channel != -1) {
-#ifdef SOUND
 				Mix_HaltChannel(brinner_channel);
-#endif
 				brinner_channel = -1;
 			}
-			PlaySound("data/ljud/respawn.ogg");
+			PlaySound(respawn);
 
 		}
 		else {
 			if (brinner_channel == -1 ||
 					! Mix_Playing(brinner_channel)) {
 
-#ifdef SOUND
-
-				Mix_Chunk *sound = NULL;
-
-				sound = Mix_LoadWAV("data/ljud/brinner.ogg");
-				if(sound == NULL) {
-					fprintf(stderr, "Unable to load WAV file: %s\n", Mix_GetError());
-				}
-
-				brinner_channel = Mix_PlayChannel(-1, sound, 0);
-				if(brinner_channel == -1) {
-					fprintf(stderr, "Unable to play WAV file: %s\n", Mix_GetError());
-				}
-#endif
+				brinner_channel = PlaySound(brinner);
 			}
 		}
 	}
@@ -905,7 +856,7 @@ int RespondToKeys()
 			bil.curspeed=0.0f;
 
 		if (!broms_in_progress) {
-			PlaySound("data/ljud/broms.ogg");
+			PlaySound(broms);
 			broms_in_progress = 1;
 		}
 
@@ -922,7 +873,7 @@ int RespondToKeys()
 	if(keys[SDLK_TAB]) {
 		PressedB[3]='1';
 		if (!tut_in_progress) {
-			PlaySound("data/ljud/tut.ogg");
+			PlaySound(tut);
 			tut_in_progress = 1;
 		}
 	}
@@ -1223,7 +1174,7 @@ int CalcGameVars()
 						tmpx=0.0f; tmpy=0.0f;
 						// EJJ, SÅ HÄR SKA DET JU VARA!!!!!
 						bil.curspeed=-bil.curspeed;
-						PlaySound("data/ljud/krasch.ogg");
+						PlaySound(krasch);
 						player.krockar++;
 						//std::cout << "KROCK!";
 
@@ -1285,9 +1236,9 @@ int CalcGameVars()
 							struct timeval tv;
 							gettimeofday(&tv, NULL);
 							if(tv.tv_usec % 2)
-								PlaySound("data/ljud/aj.ogg");
+								PlaySound(aj0);
 							else
-								PlaySound("data/ljud/aj2.ogg");
+								PlaySound(aj1);
 							player.runovers++;
 							/*} else if(bil.curspeed<1.0f && bil.curspeed>-1.0f) { // det ska vara så att man skjuter dem framför om man kör på dem för sakta...
 							  gubbar[loop1].tmpx=tmpx;
@@ -1295,7 +1246,7 @@ int CalcGameVars()
 					} else {
 						//gubbar[loop1].angle=-gubbar[loop1].angle;
 						gubbar[loop1].angle+=180;
-						PlaySound("data/ljud/move.ogg");
+						PlaySound(move);
 					}
 					}
 
@@ -1337,10 +1288,6 @@ int CalcGameVars()
 				}
 	} // !Network
 	/* -----------------------------------------------------------------*/
-
-	//if(bil.helhet==0) {
-	//PlaySound("data/ljud/brinner.ogg");
-	//}
 
 	bil.posx+=tmpx;
 	bil.posy+=tmpy;
@@ -1666,24 +1613,14 @@ int CheckaEvents()
 
 }
 
-#ifdef SOUND
 void channel_finished(int channel) {
-
-	static Mix_Chunk *farlig = NULL;
 
 	// quick exit
 	if (channel != background_channel)
 		return;
 
-	if (farlig == NULL)
-		farlig = Mix_LoadWAV("data/ljud/farlig.ogg");
-
-	if (farlig == NULL)
-		fprintf(stderr, "Unable to load WAV file: %s\n", Mix_GetError());
-
-	background_channel = Mix_PlayChannel(background_channel, farlig, 0);
+	background_channel = PlaySoundChannel(farlig, background_channel);
 }
-#endif
 
 int main()
 {
@@ -1717,8 +1654,6 @@ int main()
 	fullscreen=FALSE;							// Windowed Mode
 
 
-	/* XXX */
-#ifdef SOUND
 	int audio_rate = 22050;
 	Uint16 audio_format = AUDIO_S16SYS;
 	int audio_channels = 1;
@@ -1727,13 +1662,11 @@ int main()
 		fprintf(stderr, "Unable to initialize audio: %s\n", Mix_GetError());
 		exit(1);
 	}
-#endif
-	/* /XXX */
 
 	InitGL();
 	LoadCars();
 	LoadLevel();
-	//LoadSamples();
+	LoadSamples();
 
 
 	// HUVUDLOOPEN!!! Detta är själva spelet!
@@ -1741,20 +1674,9 @@ int main()
 	Uint32 TimerTicks;
 	Uint32 tmpTicks;
 
-#ifdef SOUND
 	Mix_ChannelFinished(channel_finished);
-	Mix_Chunk *sound = NULL;
+	background_channel = PlaySound(welcome);
 
-	sound = Mix_LoadWAV("data/ljud/welcome.ogg");
-	if(sound == NULL) {
-		fprintf(stderr, "Unable to load WAV file: %s\n", Mix_GetError());
-	}
-
-	background_channel = Mix_PlayChannel(-1, sound, 0);
-	if (background_channel == -1) {
-		fprintf(stderr, "Unable to play WAV file: %s\n", Mix_GetError());
-	}
-#endif
 	while(!done)
 	{
 
