@@ -1,4 +1,3 @@
-
 TARGETS=gta2k4lin
 
 CXX_SOURCES=main.cpp TGALoader.cpp
@@ -12,13 +11,19 @@ CXXFLAGS=-O2 -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -DSOUND -f
 
 LIBS=$(shell pkg-config --libs $(LIBRARIES))
 
-.PHONY: default
+.PHONY: default clean dist
 
 default: $(TARGETS)
-
-gta2k4lin: main.o TGALoader.o
-	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
 
 clean:
 	rm -f *.o $(TARGETS)
 
+dist: gta2k4lin.tar.bz2
+
+gta2k4lin: main.o TGALoader.o
+	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
+
+# "git describe --tags --always HEAD" would be nice to use in the file name,
+# but how to solve outside of git (i.e. in tar.bz2 source dist)?
+gta2k4lin.tar.bz2:
+	git archive --prefix=gta2k4lin/ HEAD | bzip2 > $@
