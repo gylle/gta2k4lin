@@ -1,0 +1,7 @@
+gta2k4lin
+.libs
+*.o
+*.o
+*.lo
+core
+*.core
