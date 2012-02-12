@@ -1,11 +1,11 @@
 // gta 2000... :) (Inte officielt namn)
-// Detta ska föreställa linux porten...
+// Detta ska fÃ¶restÃ¤lla linux porten...
 
 
 
 //////////////////////////////////////////////////////////////////////////
 //		KATASTROF::		Koden blir mer och mer ostrukturerad			//
-//						Oklart hur länge det går att fatta nåt av den :)//
+//						Oklart hur lÃ¤nge det gÃ¥r att fatta nÃ¥t av den :)//
 //////////////////////////////////////////////////////////////////////////
 
 
@@ -42,7 +42,7 @@
 
 int width = 640;
 int height = 480;
-int bpp = 32; // Vi gillar 32 här dåva
+int bpp = 32; // Vi gillar 32 hÃ¤r dÃ¥va
 
 
 // Hymmz, dessa verkar inte finnas i linux...
@@ -73,11 +73,11 @@ enum sounds {
 Mix_Chunk *sound_chunks[NUM_SOUNDS];
 #define SAMPLE_PATH "data/ljud/"
 
-// Iallafall så är stommen för nätverket laggd...
+// Iallafall sÃ¥ Ã¤r stommen fÃ¶r nÃ¤tverket laggd...
 // Hmmm, det tar sig...
 
-// Enable:as bara ifall man ska försöka få igång nätverket...
-bool Network=FALSE;			// Nätverk eller singelplayer...
+// Enable:as bara ifall man ska fÃ¶rsÃ¶ka fÃ¥ igÃ¥ng nÃ¤tverket...
+bool Network=FALSE;			// NÃ¤tverk eller singelplayer...
 bool Server=FALSE;			// Om Server, annars klient.
 
 // I vilkenservervillduanslutatill-rutan?
@@ -89,10 +89,10 @@ int brinner_channel = -1;
 int background_channel = -1;
 
 
-// Skaffa FPS räknare... hur ska man gööra?
+// Skaffa FPS rÃ¤knare... hur ska man gÃ¶Ã¶ra?
 
 
-// Temporära grejjer!!!
+// TemporÃ¤ra grejjer!!!
 bool dod=FALSE;
 bool sant=FALSE;
 int krocktimer=20;
@@ -116,13 +116,13 @@ GLuint	GubbeDispList;
 
 
 // Fina spel grejjer!
-float speed=50.0f;		// Aj aj... det här var inte bra...
+float speed=50.0f;		// Aj aj... det hÃ¤r var inte bra...
 
-const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
+const int gubbtid=300;		// Hur lÃ¥ng tid en gubbe Ã¤r dÃ¶d... RÃ¤knas i frames :)
 const int nrgubbar=100;
 
 
-// ej, det här är typ.nätwärch stuff. (Vilket språk jag har!)
+// ej, det hÃ¤r Ã¤r typ.nÃ¤twÃ¤rch stuff. (Vilket sprÃ¥k jag har!)
 /*
    WSADATA wsaData;
    SOCKET AnnanData;
@@ -134,13 +134,13 @@ const int nrgubbar=100;
    int nRet;
    */
 
-// Den här är för stor, tar mycket bandbredd. (tror jag)
+// Den hÃ¤r Ã¤r fÃ¶r stor, tar mycket bandbredd. (tror jag)
 //char BuFFer[256];
 char BuFFer[16];
 
-// En array bestående av 1:or och 0:or... alla knappar...
+// En array bestÃ¥ende av 1:or och 0:or... alla knappar...
 char PressedB[8];
-// En till, fast för knapparna _mottagna_ från andra datorn...
+// En till, fast fÃ¶r knapparna _mottagna_ frÃ¥n andra datorn...
 char mPressedB[8];
 
 int IBuf;
@@ -152,11 +152,11 @@ char Riktning[2];
 
 
 struct cube {
-	// Vilket plan den är på. 0.0f är det man går/åker på,
+	// Vilket plan den Ã¤r pÃ¥. 0.0f Ã¤r det man gÃ¥r/Ã¥ker pÃ¥,
 	float z;
 	// Vilken textur som ska mappas till kuben...
 	int texturenr;
-	// Ett namn på stället man är.
+	// Ett namn pÃ¥ stÃ¤llet man Ã¤r.
 	char* beskrivning;
 };
 
@@ -172,11 +172,11 @@ struct car {
 	int turnspeed;
 	// Hur fort bilen stannar om man inte gasar
 	float speeddown;
-	// Hur många grader bilen är vriden...
+	// Hur mÃ¥nga grader bilen Ã¤r vriden...
 	int angle;
-	// Hur hel bilen är(%). 100 är helhel, 0 är heltrasig.
+	// Hur hel bilen Ã¤r(%). 100 Ã¤r helhel, 0 Ã¤r heltrasig.
 	int helhet;
-	// Poäng. I Multiplayer spel hur många "frags" man har...
+	// PoÃ¤ng. I Multiplayer spel hur mÃ¥nga "frags" man har...
 	int Points;
 
 
@@ -187,27 +187,27 @@ struct gubbe {
 	float x,y,z;
 	// Positionen:
 	float posx,posy,posz;
-	// Texturer. ltexture2=huvudet. ltexture=resten. dtexturer=texture då gubben dött...
+	// Texturer. ltexture2=huvudet. ltexture=resten. dtexturer=texture dÃ¥ gubben dÃ¶tt...
 	int ltexture, ltexture2,  dtexture;
 	// Fartsaker...
 	float maxspeed,maxbspeed,curspeed,accspeed;
-	// Hur många grader gubben är vriden...
+	// Hur mÃ¥nga grader gubben Ã¤r vriden...
 	int angle;
 	// Lever?
 	bool alive;
 	// Tid tills han lever igen...
 	int atimer;
-	// 2 temporära grejjer... Används framförallt av förflyttnings funktionen...
+	// 2 temporÃ¤ra grejjer... AnvÃ¤nds framfÃ¶rallt av fÃ¶rflyttnings funktionen...
 	float tmpx,tmpy;
 
 };
 
 struct spelare {
-	// Poäng
+	// PoÃ¤ng
 	int points;
 	// Krockar
 	int krockar;
-	// Överkörda människor
+	// Ã–verkÃ¶rda mÃ¤nniskor
 	int runovers;
 };
 
@@ -227,7 +227,7 @@ spelare player;
 
 float bsize=5.0f;
 
-// Storleken på banan skulle behövas laddas in från en fil, men för tillfället vet jag inte riktigt hur det skulle gå till...
+// Storleken pÃ¥ banan skulle behÃ¶vas laddas in frÃ¥n en fil, men fÃ¶r tillfÃ¤llet vet jag inte riktigt hur det skulle gÃ¥ till...
 const int nrcubex=20;
 const int nrcubey=20;
 
@@ -240,7 +240,7 @@ car bil;
 car mbil;		 // andra bilen i multiplayer
 
 
-// Bra att ha för att rotera och ha sig...
+// Bra att ha fÃ¶r att rotera och ha sig...
 GLfloat	zrot=0,xrot=0,yrot=0;
 GLfloat transx=0.0f, transy=0.0f;
 GLfloat Distance=-30.0f, SpeedVar, tmpSpeedVar;
@@ -254,7 +254,7 @@ int LoadSample(char *file, enum sounds sound) {
 	}
 }
 
-int LoadSamples()				// Här loadar vi alla bananiga samples vi ska dra igång...
+int LoadSamples()				// HÃ¤r loadar vi alla bananiga samples vi ska dra igÃ¥ng...
 {
 	int errors = 0;
 	errors += LoadSample(SAMPLE_PATH "aj.ogg", aj0);
@@ -308,8 +308,8 @@ float CalcMapPlace(int cx,int cy,bool xy)
 
 char* ensiffrachar(int ensiffraint)
 {
-	// Ejj, kommer direkt från mitt chartest program :)
-	// (Undrar om den verkligen fungerar, eller om den läcker minne 2000)
+	// Ejj, kommer direkt frÃ¥n mitt chartest program :)
+	// (Undrar om den verkligen fungerar, eller om den lÃ¤cker minne 2000)
 
 	char* temp= new char[20];
 
@@ -337,7 +337,7 @@ int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 	bool status=false;
 
 	/*
-	// De texturer som på nåt sätt ska laddas är:
+	// De texturer som pÃ¥ nÃ¥t sÃ¤tt ska laddas Ã¤r:
 	if ((TextureImage[0]=LoadBMP("data/test.bmp")) &&
 	(TextureImage[1]=LoadBMP("data/carroof.bmp")) &&
 	(TextureImage[2]=LoadBMP("data/road1.bmp")) &&
@@ -420,8 +420,8 @@ void ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The 
 int LoadLevel()
 {
 
-	// Används inte, borttaget för att spara plats...
-	// Humm... jag kom på att det visst används. :)
+	// AnvÃ¤nds inte, borttaget fÃ¶r att spara plats...
+	// Humm... jag kom pÃ¥ att det visst anvÃ¤nds. :)
 	// Bara att kopiera tillbaks...
 
 	// LADDA IN!!!!
@@ -441,7 +441,7 @@ int LoadLevel()
 	map[0][1].z=0.0f;
 	map[0][1].texturenr=1;
 
-	// Vägen -------------------------------
+	// VÃ¤gen -------------------------------
 	for(loop1=0;loop1<nrcubey;loop1++)
 		map[1][loop1].texturenr=2;
 
@@ -459,7 +459,7 @@ int LoadLevel()
 	map[2][nrcubey-3].texturenr=7;
 
 
-	// "Väggen" runtomkring
+	// "VÃ¤ggen" runtomkring
 	for(loop1=0;loop1<nrcubey;loop1++) {
 		map[0][loop1].texturenr=4;
 		map[0][loop1].z=1.0f;
@@ -479,13 +479,13 @@ int LoadLevel()
 		map[loop1][nrcubey-1].z=1.0f;
 	}
 
-	// Vi lägger in lite buskar
+	// Vi lÃ¤gger in lite buskar
 	for(loop1=1;loop1<(nrcubey/2-1);loop1+=2) {
 		map[nrcubex/2][loop1].texturenr=15;
 		map[nrcubex/2][loop1].z=1.0f;
 	}
 
-	// Vägen in till mitten och den fina credits saken där.
+	// VÃ¤gen in till mitten och den fina credits saken dÃ¤r.
 	for(loop1=3;loop1<nrcubex/2;loop1++)
 		map[loop1][nrcubey/2].texturenr=7;
 
@@ -510,7 +510,7 @@ int LoadCars()   // och gubbar.
 
 	bil.posx=10;
 	bil.posy=10;
-	bil.posz=bsize; // Ska nog inte initialiseras här..
+	bil.posz=bsize; // Ska nog inte initialiseras hÃ¤r..
 
 	bil.t1=1;
 	bil.t2=1;
@@ -523,16 +523,16 @@ int LoadCars()   // och gubbar.
 	bil.maxbspeed=-1.0f;
 	bil.bromsspeed=0.3f;
 	bil.speeddown=0.10f;
-	// Orginal värdet
+	// Orginal vÃ¤rdet
 	// bil.turnspeed=6;
-	// Nytt värde, den svänger trotsallt lite segt...
+	// Nytt vÃ¤rde, den svÃ¤nger trotsallt lite segt...
 	bil.turnspeed=8;
 
 	bil.angle=0;
 
 	bil.Points=0;
 
-	// "Nätverks"-bilen
+	// "NÃ¤tverks"-bilen
 	mbil.x=3;
 	mbil.y=5;
 	mbil.z=2;
@@ -541,7 +541,7 @@ int LoadCars()   // och gubbar.
 
 	mbil.posx=10;
 	mbil.posy=10;
-	mbil.posz=bsize; // Ska nog inte initialiseras här..
+	mbil.posz=bsize; // Ska nog inte initialiseras hÃ¤r..
 
 	mbil.t1=1;
 	mbil.t2=1;
@@ -576,7 +576,7 @@ int LoadCars()   // och gubbar.
 
 
 
-	// Kicka igång alla gubbar
+	// Kicka igÃ¥ng alla gubbar
 	bool bra;
 
 	int einar=0;
@@ -601,8 +601,8 @@ int LoadCars()   // och gubbar.
 
 
 		bra=FALSE;
-		// Voila, en slumpgenerator... då var det bara collisiondetection grejjen kvar...
-		// den förbannade doningen FUNGERAR INTE!
+		// Voila, en slumpgenerator... dÃ¥ var det bara collisiondetection grejjen kvar...
+		// den fÃ¶rbannade doningen FUNGERAR INTE!
 		while(!bra) {
 			srand(TimerGetTime()+einar);
 			einar = einar +1;
@@ -630,7 +630,7 @@ int LoadCars()   // och gubbar.
 	}
 
 
-	// Vi bygger en Display List!!! EJJJJ!!!(som i öj) :)
+	// Vi bygger en Display List!!! EJJJJ!!!(som i Ã¶j) :)
 
 	GubbeDispList=glGenLists(1);
 
@@ -667,14 +667,14 @@ int LoadCars()   // och gubbar.
 
 
 */
-	// För att det finns massa som refererar till detta:
+	// FÃ¶r att det finns massa som refererar till detta:
 	loop1=1;
 	glBindTexture(GL_TEXTURE_2D,texture[gubbar[loop1].ltexture2].texID);
 
 	glBegin(GL_QUADS);
 
 
-	// Ovanifrån...
+	// OvanifrÃ¥n...
 
 	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
 	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// -----------X
@@ -682,12 +682,12 @@ int LoadCars()   // och gubbar.
 	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
 	glEnd();
 
-	// Börja en ny glBegin för att vi ska kunna texturemappa huvudet och resten seperat...
+	// BÃ¶rja en ny glBegin fÃ¶r att vi ska kunna texturemappa huvudet och resten seperat...
 	glBindTexture(GL_TEXTURE_2D,texture[gubbar[loop1].ltexture].texID);
 
 	glBegin(GL_QUADS);
 
-	//Höger och vänster
+	//HÃ¶ger och vÃ¤nster
 
 
 	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
@@ -723,7 +723,7 @@ int LoadCars()   // och gubbar.
 
 int SetupNet()
 {
-	// Förnärvarande inget stöd för nätverk i linux versionen--
+	// FÃ¶rnÃ¤rvarande inget stÃ¶d fÃ¶r nÃ¤tverk i linux versionen--
 	return 0;
 }
 
@@ -793,19 +793,19 @@ int RespondToKeys()
 {
 
 
-	/* PressedB[	Vad de olika värdena i den här strängen betyder...
+	/* PressedB[	Vad de olika vÃ¤rdena i den hÃ¤r strÃ¤ngen betyder...
 	   0 = UP
 	   1 = NER
 	   2 = SPACE
 	   3 = TAB
-	   4 = VÄNSTER
-	   5 = HÖGER
+	   4 = VÃ„NSTER
+	   5 = HÃ–GER
 	   6 = RESPAWNA
 	   */
 
 
 
-	for(int PBtmp=0;PBtmp<8;PBtmp++)  // n0lla variabeln varje gång...
+	for(int PBtmp=0;PBtmp<8;PBtmp++)  // n0lla variabeln varje gÃ¥ng...
 		PressedB[PBtmp]='0';
 
 
@@ -886,12 +886,12 @@ int RespondToKeys()
 
 
 	if(keys[SDLK_LEFT]) {
-		sttmp=bil.curspeed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och
+		sttmp=bil.curspeed/bil.maxspeed;			// OmÃ¶jliggÃ¶r styrning vid stillastÃ¥ende, och
 		if(brakepressed)
 			sttmp+=0.7f;
 
 		if(bil.curspeed!=0.0f)
-			bil.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
+			bil.angle+=bil.turnspeed*sttmp;				// Ã¶ka graden av styrmÃ¶jlighet ju snabbare det gÃ¥r.
 
 		PressedB[4]='1';
 	}
@@ -903,12 +903,12 @@ int RespondToKeys()
 			sttmp+=0.7f;
 
 		if(bil.curspeed!=0.0f)
-			bil.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
+			bil.angle-=bil.turnspeed*sttmp;				// Ã¶ka graden av styrmÃ¶jlighet ju snabbare det gÃ¥r.
 
 		PressedB[5]='1';
 	}
 
-	// Detta är debug grejjer/saker som inte ska vara kvar i "riktiga" versionen...
+	// Detta Ã¤r debug grejjer/saker som inte ska vara kvar i "riktiga" versionen...
 	// Styr kameran
 	if(keys[SDLK_F5]) {
 		Distance-=0.5f;
@@ -940,19 +940,19 @@ int RespondToKeys()
 	}
 
 	// Nu vet vi precis vilka knappar som var pressade...
-	// Då skickar vi strängen PressedB, och tar emot mPressedB
-	// Hmm, det här var snabbare än mitt förra sätt, men jag tycker att det borde finnas ännu snabbare sätt att
-	// Skicka data på... Undrar hur quake fungerar, tex... :)
+	// DÃ¥ skickar vi strÃ¤ngen PressedB, och tar emot mPressedB
+	// Hmm, det hÃ¤r var snabbare Ã¤n mitt fÃ¶rra sÃ¤tt, men jag tycker att det borde finnas Ã¤nnu snabbare sÃ¤tt att
+	// Skicka data pÃ¥... Undrar hur quake fungerar, tex... :)
 
 
-	// NÄTVERKSSAK BORTTAGEN.
+	// NÃ„TVERKSSAK BORTTAGEN.
 
 	///////////////////////////////////////////////////////////
-	// Beräkna samma saker fast för den andra bilen!! ////////////////////////77
+	// BerÃ¤kna samma saker fast fÃ¶r den andra bilen!! ////////////////////////77
 	/////////////////////////////////////////////////////////////////////////////
 
 
-	// NÄTVERKSSAK BORTTAGEN
+	// NÃ„TVERKSSAK BORTTAGEN
 
 	return true;
 }
@@ -990,14 +990,14 @@ int CalcGameVars()
 		bil.angle=bil.angle-360;
 
 
-	// Svänger bilen så att den åker åt rätt håll
+	// SvÃ¤nger bilen sÃ¥ att den Ã¥ker Ã¥t rÃ¤tt hÃ¥ll
 
 	float tmpx=0.0f,tmpy=0.0f;
 	float tmpangle;
 
 	tmpangle=(float)bil.angle;
 
-	// Det här fungerar, nu är det bara 3/4 kvar att fixa :D
+	// Det hÃ¤r fungerar, nu Ã¤r det bara 3/4 kvar att fixa :D
 	if(bil.angle>=0 && bil.angle<=90) {
 		tmpx=-((tmpangle/90.0f)*bil.curspeed);
 		tmpy=bil.curspeed+tmpx;
@@ -1016,7 +1016,7 @@ int CalcGameVars()
 		tmpx=-(bil.curspeed+tmpy);
 	}
 
-	// FÄRDIGT!!!
+	// FÃ„RDIGT!!!
 	if(bil.angle>180 && bil.angle<270) {
 		tmpangle-=180.0f;
 		tmpx=(tmpangle/90.0f)*bil.curspeed;
@@ -1027,18 +1027,18 @@ int CalcGameVars()
 
 	///////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////
-	///			Styr även nätverksbilarna...						 //
+	///			Styr Ã¤ven nÃ¤tverksbilarna...						 //
 	///////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////
 	float mtmpx=0.0f,mtmpy=0.0f;
 
-	//NÄTVERKSSAK BORTTAGEN
+	//NÃ„TVERKSSAK BORTTAGEN
 
 
 
-	// Styr de datorkontrollerade gubbarna (och senare även bilar?)
+	// Styr de datorkontrollerade gubbarna (och senare Ã¤ven bilar?)
 	// ----------------------------------------------------
-	// Nej, jag har bestämt mig. Vi stänger av gubbarna när vi kör med networch...
+	// Nej, jag har bestÃ¤mt mig. Vi stÃ¤nger av gubbarna nÃ¤r vi kÃ¶r med networch...
 	//int tmprand;
 
 	int einar=0; bool bra;
@@ -1046,17 +1046,17 @@ int CalcGameVars()
 	if(!Network) {
 		for(int loop1=0;loop1<nrgubbar;loop1++) {
 
-			// den här funktionen som bestämmer vad gubbarna ska göra måste skrivas om,
-			// Gubbarna är totalt urblåsta.
-			srand((int)TimerGetTime()+loop1);		// det är jobbigt om gubbarna flyttar på sig så fort man svänger bilen...
+			// den hÃ¤r funktionen som bestÃ¤mmer vad gubbarna ska gÃ¶ra mÃ¥ste skrivas om,
+			// Gubbarna Ã¤r totalt urblÃ¥sta.
+			srand((int)TimerGetTime()+loop1);		// det Ã¤r jobbigt om gubbarna flyttar pÃ¥ sig sÃ¥ fort man svÃ¤nger bilen...
 
 			if(gubbar[loop1].alive) {
 				tmprand=rand() % 100; // Ejjj, det wooorkar...
 
-				if(tmprand==0 && tmprand<3)  // gubben ska bara vrida sig fååå gånger..
+				if(tmprand==0 && tmprand<3)  // gubben ska bara vrida sig fÃ¥Ã¥Ã¥ gÃ¥nger..
 					gubbar[loop1].angle+=10;
 
-				if(tmprand>=3 && tmprand<5)  // Ge även möjligheten att vända åt andra hållet...
+				if(tmprand>=3 && tmprand<5)  // Ge Ã¤ven mÃ¶jligheten att vÃ¤nda Ã¥t andra hÃ¥llet...
 					gubbar[loop1].angle-=10;
 
 				if(tmprand>=5 && tmprand<=100)
@@ -1136,43 +1136,43 @@ int CalcGameVars()
 
 
 
-	// Nu är det kollisiondetection som gäller här...
-	// För att inte göra det för svårt, gör vi bara kuber med ett z:a värde på 0.0f åkbara...
+	// Nu Ã¤r det kollisiondetection som gÃ¤ller hÃ¤r...
+	// FÃ¶r att inte gÃ¶ra det fÃ¶r svÃ¥rt, gÃ¶r vi bara kuber med ett z:a vÃ¤rde pÃ¥ 0.0f Ã¥kbara...
 
-	// Kontrollera så att den inte krockar med en kuuub...
+	// Kontrollera sÃ¥ att den inte krockar med en kuuub...
 	/* -------------------------------------------------------------
-	   HÄÄÄÄR ÄR DET VIIIKTIGAST JUST NUUUUUU!!!!!!!!!!!!!!!!!!
+	   HÃ„Ã„Ã„Ã„R Ã„R DET VIIIKTIGAST JUST NUUUUUU!!!!!!!!!!!!!!!!!!
 	   ------------------------------------------------------------ */
 
 	float tmpbilx, tmpbily;
 
 	/*if((bil.angle>=75 && bil.angle<=105) || (bil.angle>=255 && bil.angle<= 285)) {
-	  tmpbilx=bil.y;  // Kompensera lite för att bilen är olika stor och bred....
-	  tmpbily=bil.x;	// BANAN!! Detta fungerade, men risken är att bilen fastnar i väggen...
+	  tmpbilx=bil.y;  // Kompensera lite fÃ¶r att bilen Ã¤r olika stor och bred....
+	  tmpbily=bil.x;	// BANAN!! Detta fungerade, men risken Ã¤r att bilen fastnar i vÃ¤ggen...
 	  } else { */
 	tmpbilx=bil.x;
 	tmpbily=bil.y;
 	//}
 
 	/////////////////////////////////////////////////////////////////////////////////
-	/// EINAR!!! Det här kommer ju att dra lika mycket CPU som... jag vet inte vad...
+	/// EINAR!!! Det hÃ¤r kommer ju att dra lika mycket CPU som... jag vet inte vad...
 	/////////////////////////////////////////////////////////////////////////////////
 
 
 	int loop1 = 0, loop2 = 0;
 
 
-	// Det kan tyckas vara onödigt att kolla alla kuber på banan... fixa så att den kollar bara de närmaste...
-	// kontrollera så att inte bilen krockar med en stor KUUB!
+	// Det kan tyckas vara onÃ¶digt att kolla alla kuber pÃ¥ banan... fixa sÃ¥ att den kollar bara de nÃ¤rmaste...
+	// kontrollera sÃ¥ att inte bilen krockar med en stor KUUB!
 	for(loop1=0 ;loop1<nrcubex;loop1++)
 		for(loop2=0;loop2<nrcubey;loop2++) {
-			if(map[loop1][loop2].z!=0.0f) {		// Om inte kuben är ett underlag...
+			if(map[loop1][loop2].z!=0.0f) {		// Om inte kuben Ã¤r ett underlag...
 
 				if(bil.posx+tmpx+tmpbilx/2>=CalcMapPlace(loop1,loop2,0)-bsize && bil.posx+tmpx-tmpbilx/2<=CalcMapPlace(loop1,loop2,0)+bsize)
 					if(bil.posy+tmpy+tmpbily/2>=CalcMapPlace(loop1,loop2,1)-bsize && bil.posy+tmpy-tmpbily/2<=CalcMapPlace(loop1,loop2,1)+bsize) {
-						// Vi stannar bilen under den här framen för att inte bilen ska åka in där iallafall...
+						// Vi stannar bilen under den hÃ¤r framen fÃ¶r att inte bilen ska Ã¥ka in dÃ¤r iallafall...
 						tmpx=0.0f; tmpy=0.0f;
-						// EJJ, SÅ HÄR SKA DET JU VARA!!!!!
+						// EJJ, SÃ… HÃ„R SKA DET JU VARA!!!!!
 						bil.curspeed=-bil.curspeed;
 						PlaySound(krasch);
 						player.krockar++;
@@ -1198,28 +1198,28 @@ int CalcGameVars()
 		}
 
 
-	// Om vi spelar nätverk, så ska vi även dra CPU på att kolla om andra bilen har krockat...
+	// Om vi spelar nÃ¤tverk, sÃ¥ ska vi Ã¤ven dra CPU pÃ¥ att kolla om andra bilen har krockat...
 	/////////////////////////////////////////////////////////////////////////////////////////
-	// Detta är alltså nätverksbilen som kollas emot krockar!!!!
+	// Detta Ã¤r alltsÃ¥ nÃ¤tverksbilen som kollas emot krockar!!!!
 
-	//NÄTVERKSSAK BORTTAGEN
-
-
-	// Kolla så att inte de små bilbananerna krockar med varandra...
-
-	//NÄTVERKSSAK BORTTAGEN
+	//NÃ„TVERKSSAK BORTTAGEN
 
 
+	// Kolla sÃ¥ att inte de smÃ¥ bilbananerna krockar med varandra...
+
+	//NÃ„TVERKSSAK BORTTAGEN
 
 
-	// Kolla så att inte gubbarna krockar med bilen...
-	// Vi lägger detta före de andra gubb grejjerna, för att jag kanske knuffar lite på gubbarna här...
+
+
+	// Kolla sÃ¥ att inte gubbarna krockar med bilen...
+	// Vi lÃ¤gger detta fÃ¶re de andra gubb grejjerna, fÃ¶r att jag kanske knuffar lite pÃ¥ gubbarna hÃ¤r...
 
 	if(!Network) {
 
 		if((bil.angle>=75 && bil.angle<=105) || (bil.angle>=255 && bil.angle<= 285)) {
-			tmpbilx=bil.y;  // Kompensera lite för att bilen är olika lång och bred....
-			tmpbily=bil.x;	// Detta fungerade inte så bra till väggarna, men jag tror det gör underverk för gubbarna...
+			tmpbilx=bil.y;  // Kompensera lite fÃ¶r att bilen Ã¤r olika lÃ¥ng och bred....
+			tmpbily=bil.x;	// Detta fungerade inte sÃ¥ bra till vÃ¤ggarna, men jag tror det gÃ¶r underverk fÃ¶r gubbarna...
 		} else {
 			tmpbilx=bil.x;
 			tmpbily=bil.y;
@@ -1231,7 +1231,7 @@ int CalcGameVars()
 				if(bil.posx+tmpx+tmpbilx/2>=gubbar[loop1].posx+gubbar[loop1].tmpx-(gubbar[loop1].x/2) && bil.posx+tmpx-tmpbilx/2<=gubbar[loop1].posx+gubbar[loop1].tmpx+(gubbar[loop1].x/2))
 					if(bil.posy+tmpy+tmpbily/2>=gubbar[loop1].posy+gubbar[loop1].tmpy-(gubbar[loop1].y/2) && bil.posy+tmpy-tmpbily/2<=gubbar[loop1].posy+gubbar[loop1].tmpy+(gubbar[loop1].y/2)) {
 						if(bil.curspeed>0.4f || bil.curspeed<-0.4f) {
-							gubbar[loop1].alive=false;		 // Här ska man väl även få poäng, antar jag...
+							gubbar[loop1].alive=false;		 // HÃ¤r ska man vÃ¤l Ã¤ven fÃ¥ poÃ¤ng, antar jag...
 
 							struct timeval tv;
 							gettimeofday(&tv, NULL);
@@ -1240,7 +1240,7 @@ int CalcGameVars()
 							else
 								PlaySound(aj1);
 							player.runovers++;
-							/*} else if(bil.curspeed<1.0f && bil.curspeed>-1.0f) { // det ska vara så att man skjuter dem framför om man kör på dem för sakta...
+							/*} else if(bil.curspeed<1.0f && bil.curspeed>-1.0f) { // det ska vara sÃ¥ att man skjuter dem framfÃ¶r om man kÃ¶r pÃ¥ dem fÃ¶r sakta...
 							  gubbar[loop1].tmpx=tmpx;
 							  gubbar[loop1].tmpy=tmpy; */
 					} else {
@@ -1252,22 +1252,22 @@ int CalcGameVars()
 
 		}
 
-		// Se till så att inte gubbarna krockar med sig själva
+		// Se till sÃ¥ att inte gubbarna krockar med sig sjÃ¤lva
 		// denna funktion kan optimeras tusenfalt!!
-		// Men det värsta måste väl vara att den inte fungerar...
-		// Orkar inte krångla med den nu, jag vill få igång lite roliga saker...
+		// Men det vÃ¤rsta mÃ¥ste vÃ¤l vara att den inte fungerar...
+		// Orkar inte krÃ¥ngla med den nu, jag vill fÃ¥ igÃ¥ng lite roliga saker...
 
 		//TRASIG GUBBSAK BORTTAGEN
 
-		// Se till så att inte gubbarna krockar med nåt väggaktigt...
-		// Fungerar, men vad som händer med gubbarna behöver absolut finjusteras...
+		// Se till sÃ¥ att inte gubbarna krockar med nÃ¥t vÃ¤ggaktigt...
+		// Fungerar, men vad som hÃ¤nder med gubbarna behÃ¶ver absolut finjusteras...
 
-		// Oj, oj, oj... precis när jag trodde att jag nått CPU toppen för en liten funktion...
+		// Oj, oj, oj... precis nÃ¤r jag trodde att jag nÃ¥tt CPU toppen fÃ¶r en liten funktion...
 
 		for(int loop3=0 ;loop3<nrgubbar; loop3++)
 			for(loop1=0 ;loop1<nrcubex;loop1++)
 				for(int loop2=0;loop2<nrcubey;loop2++) {
-					if(map[loop1][loop2].z!=0.0f) {		// Om inte kuben är ett underlag...
+					if(map[loop1][loop2].z!=0.0f) {		// Om inte kuben Ã¤r ett underlag...
 
 						if(gubbar[loop3].posx+gubbar[loop3].tmpx+gubbar[loop3].x/2>=CalcMapPlace(loop1,loop2,0)-bsize && gubbar[loop3].posx+gubbar[loop3].tmpx-gubbar[loop3].x/2<=CalcMapPlace(loop1,loop2,0)+bsize)
 							if(gubbar[loop3].posy+gubbar[loop3].tmpy+gubbar[loop3].y/2>=CalcMapPlace(loop1,loop2,1)-bsize && gubbar[loop3].posy+gubbar[loop3].tmpy-gubbar[loop3].y/2<=CalcMapPlace(loop1,loop2,1)+bsize) {
@@ -1299,10 +1299,10 @@ int CalcGameVars()
 
 
 
-	// Räkna ut i vilket väderstreck den andra bilen befinner sig...
+	// RÃ¤kna ut i vilket vÃ¤derstreck den andra bilen befinner sig...
 	if(Network) {
 
-		// NÄTVERKSSAK BORTTAGEN
+		// NÃ„TVERKSSAK BORTTAGEN
 
 	}
 
@@ -1313,7 +1313,7 @@ int CalcGameVars()
 		}
 
 
-	// Få kameran att höjas och sänkas beroende på hastigheten...
+	// FÃ¥ kameran att hÃ¶jas och sÃ¤nkas beroende pÃ¥ hastigheten...
 	tmpSpeedVar=bil.curspeed*5;
 	if(tmpSpeedVar>0)
 		tmpSpeedVar=-tmpSpeedVar;
@@ -1364,7 +1364,7 @@ int DrawGLScene()
 	glTranslatef(transx,transy,Distance+SpeedVar);
 
 	// Spelplanen
-	// Hmm, nu ska vi rita upp spelplanen... sen ska den optimeras så den bara ritar upp det nödvändiga...
+	// Hmm, nu ska vi rita upp spelplanen... sen ska den optimeras sÃ¥ den bara ritar upp det nÃ¶dvÃ¤ndiga...
 
 	//glDisable(GL_COLOR_MATERIAL);
 
@@ -1410,7 +1410,7 @@ int DrawGLScene()
 			glTexCoord2f(0.0f, 1.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
 
 
-			// Vänster sida.
+			// VÃ¤nster sida.
 			glTexCoord2f(0.0f, 0.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
 			glTexCoord2f(1.0f, 0.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
 			glTexCoord2f(1.0f, 1.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
@@ -1436,7 +1436,7 @@ int DrawGLScene()
 	// Ritar upp bil(en/arna) --------------------------------
 
 	// GAAAH!!!
-	// öj, det fungerar... Men det fungerar nog inte om man ska ha fler bilar...
+	// Ã¶j, det fungerar... Men det fungerar nog inte om man ska ha fler bilar...
 
 
 	glLoadIdentity();
@@ -1455,9 +1455,9 @@ int DrawGLScene()
 	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);// -----------X
 	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);// X-----------
 
-	// Inget golv, för det kommer inte att synas... tror jag.
+	// Inget golv, fÃ¶r det kommer inte att synas... tror jag.
 
-	//Höger och vänster
+	//HÃ¶ger och vÃ¤nster
 
 	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil.x/2),0.0f+(bil.y/2),bil.z+bil.posz);// X-----------
 	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);// X-----------
@@ -1484,7 +1484,7 @@ int DrawGLScene()
 
 	glEnd();
 
-	// NÄTVERKSSAK BORTTAGEN
+	// NÃ„TVERKSSAK BORTTAGEN
 
 	// Rita upp gubbbananerna...
 	// Hoho! De SNURRAR!!! :)))))
@@ -1517,13 +1517,13 @@ int DrawGLScene()
 
 			} else {
 
-				// Är man överkörd står man nog inte upp längre... :) Det här blir bättre...
+				// Ã„r man Ã¶verkÃ¶rd stÃ¥r man nog inte upp lÃ¤ngre... :) Det hÃ¤r blir bÃ¤ttre...
 				glBindTexture(GL_TEXTURE_2D,texture[gubbar[loop1].dtexture].texID);
 
 
 				glBegin(GL_QUADS);
 
-				// Ovanifrån...
+				// OvanifrÃ¥n...
 
 				glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),bsize);// X-----------
 				glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),bsize);// -----------X
@@ -1557,10 +1557,10 @@ int DrawGLScene()
 		glLoadIdentity();
 		glTranslatef(-5.0,-5.0f,-18.0f);
 		glColor3f(0.0f,0.0f,1.0f);
-		glPrint("Dina poäng:  ");
+		glPrint("Dina poÃ¤ng:  ");
 		glPrint(ensiffrachar(bil.Points));
 		glTranslatef(0.0f,-2.0f,0.0f);
-		glPrint("Annans poäng:  ");
+		glPrint("Annans poÃ¤ng:  ");
 		glPrint(ensiffrachar(mbil.Points));
 
 		glLoadIdentity();
@@ -1625,9 +1625,9 @@ void channel_finished(int channel) {
 int main()
 {
 
-	// Här är den första delen av porten....
+	// HÃ¤r Ã¤r den fÃ¶rsta delen av porten....
 
-	// Nollställ knapp-arrayen...
+	// NollstÃ¤ll knapp-arrayen...
 	for(int tmpk=0;tmpk<350;tmpk++)
 		keys[tmpk]=false;
 
@@ -1669,7 +1669,7 @@ int main()
 	LoadSamples();
 
 
-	// HUVUDLOOPEN!!! Detta är själva spelet!
+	// HUVUDLOOPEN!!! Detta Ã¤r sjÃ¤lva spelet!
 	// TODO: Implementera frameskip...
 	Uint32 TimerTicks;
 	Uint32 tmpTicks;
