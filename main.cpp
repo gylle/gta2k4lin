@@ -84,7 +84,7 @@ bool Server=FALSE;			// Om Server, annars klient.
 char TextEntered[256];
 
 int broms_in_progress = 0;
-int tut_in_progress = 0;
+int tut_channel = -1;
 int brinner_channel = -1;
 int background_channel = -1;
 
@@ -872,13 +872,12 @@ int RespondToKeys()
 
 	if(keys[SDLK_TAB]) {
 		PressedB[3]='1';
-		if (!tut_in_progress) {
-			PlaySound(tut);
-			tut_in_progress = 1;
+		if (tut_channel == -1 || ! Mix_Playing(tut_channel)) {
+			tut_channel = PlaySound(tut);
 		}
 	}
 	else {
-		tut_in_progress = 0;
+		tut_channel = -1;
 	}
 
 	float sttmp;
