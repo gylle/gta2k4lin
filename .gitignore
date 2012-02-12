@@ -1,7 +1,11 @@
 gta2k4lin
+*.tar.bz2
 .libs
 *.o
 *.o
 *.lo
 core
 *.core
+
+.*.swp
+*~
