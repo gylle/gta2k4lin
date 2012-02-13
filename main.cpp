@@ -34,11 +34,12 @@
 #include <iostream>
 #include <SDL.h>
 #include <sys/time.h>
-#include "Tga.h"
+#include <sys/param.h>
 
 #include "SDL.h"
 #include "SDL_audio.h"
 #include "SDL_mixer.h"
+#include "SDL_image.h"
 
 int width = 640;
 int height = 480;
@@ -106,11 +107,6 @@ char mapFile[17]="data/default,map";
 
 
 
-
-// Antalet texturer
-const int nroftext=16;		// Alltid en mer en det verkliga antalet, typ...
-
-Texture	texture[nroftext];
 GLuint	GubbeDispList;
 
 
@@ -148,8 +144,6 @@ float FBuf;
 
 // I vilken rikting den andra bilen befinner sig...
 char Riktning[2];
-
-
 
 struct cube {
 	// Vilket plan den är på. 0.0f är det man går/åker på,
@@ -228,12 +222,19 @@ spelare player;
 float bsize=5.0f;
 
 // Storleken på banan skulle behövas laddas in från en fil, men för tillfället vet jag inte riktigt hur det skulle gå till...
-const int nrcubex=20;
-const int nrcubey=20;
 
-cube map[nrcubex][nrcubey];
+struct world {
+	int nrcubex;
+	int nrcubey;
+	struct cube *map;
+	char **texture_filenames;
+	GLuint *texIDs;
+	int ntextures;
+};
 
-
+#define TEXTURE_PATH "data/"
+#define map_cube(world, x, y) world.map[(x) * (world).nrcubey + (y)]
+struct world world;
 
 
 car bil;
@@ -250,7 +251,7 @@ GLfloat Distance=-30.0f, SpeedVar, tmpSpeedVar;
 int LoadSample(char *file, enum sounds sound) {
 	sound_chunks[sound] = Mix_LoadWAV(file);
 	if (sound == NULL) {
-		fprintf(stderr, "Unable to load WAV file: %s\n", Mix_GetError());
+		fprintf(stderr, "Unable to load file '%s': %s\n", file, Mix_GetError());
 	}
 }
 
@@ -334,59 +335,59 @@ void glPrint(const char *fmt, ...)					// Custom GL "Print" Routine
 int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 {
 
-	bool status=false;
-
-	/*
-	// De texturer som på nåt sätt ska laddas är:
-	if ((TextureImage[0]=LoadBMP("data/test.bmp")) &&
-	(TextureImage[1]=LoadBMP("data/carroof.bmp")) &&
-	(TextureImage[2]=LoadBMP("data/road1.bmp")) &&
-	(TextureImage[3]=LoadBMP("data/road2.bmp")) &&
-	(TextureImage[4]=LoadBMP("data/building1.bmp")) &&
-	(TextureImage[5]=LoadBMP("data/road3.bmp")) &&
-	(TextureImage[6]=LoadBMP("data/road4.bmp")) &&
-	(TextureImage[7]=LoadBMP("data/road5.bmp")) &&
-	(TextureImage[8]=LoadBMP("data/road6.bmp")) &&
-	(TextureImage[9]=LoadBMP("data/road7.bmp")) &&
-	(TextureImage[10]=LoadBMP("data/dhcred.bmp")) &&
-	(TextureImage[11]=LoadBMP("data/gubbel.bmp")) &&
-	(TextureImage[12]=LoadBMP("data/gubbed.bmp")) &&
-	(TextureImage[13]=LoadBMP("data/gubbel2.bmp")) &&
-	(TextureImage[14]=LoadBMP("data/carroof2.bmp")) &&
-	(TextureImage[15]=LoadBMP("data/buske.bmp"))) {
-	*/
-
-	if(LoadTGA(&texture[0],"data/test.tga") &&
-			LoadTGA(&texture[1],"data/carroof.tga") &&
-			LoadTGA(&texture[2],"data/road1.tga") &&
-			LoadTGA(&texture[3],"data/road2.tga") &&
-			LoadTGA(&texture[4],"data/building1.tga") &&
-			LoadTGA(&texture[5],"data/road3.tga") &&
-			LoadTGA(&texture[6],"data/road4.tga") &&
-			LoadTGA(&texture[7],"data/road5.tga") &&
-			LoadTGA(&texture[8],"data/road6.tga") &&
-			LoadTGA(&texture[9],"data/road7.tga") &&
-			LoadTGA(&texture[10],"data/dhcred.tga") &&
-			LoadTGA(&texture[11],"data/gubbel.tga") &&
-			LoadTGA(&texture[12],"data/gubbed.tga") &&
-			LoadTGA(&texture[13],"data/gubbel2.tga") &&
-			LoadTGA(&texture[14],"data/carroof2.tga") &&
-			LoadTGA(&texture[15],"data/buske.tga")) {
-
-		status=true;
-
-		for(int loop=0;loop<nroftext;loop++) {
-			glGenTextures(1,&texture[loop].texID);
-			glBindTexture(GL_TEXTURE_2D,texture[loop].texID);
-			glTexImage2D(GL_TEXTURE_2D,0,3,texture[loop].width,texture[loop].height,0,GL_RGB,GL_UNSIGNED_BYTE,texture[loop].imageData);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-		}
+	/* Load textures from file names in world */
+	world.texIDs = (GLuint *)calloc(world.ntextures, sizeof(GLuint));
+	if (world.texIDs == NULL) {
+		return 0;
 	}
 
+	char path_buf[PATH_MAX];
 
+	for (int i = 0; i < world.ntextures; i++) {
+		snprintf(path_buf, PATH_MAX, "%s%s", TEXTURE_PATH,
+				world.texture_filenames[i]);
+		SDL_Surface *texture = IMG_Load(path_buf);
+		if (texture == NULL) {
+			return 0;
+		}
 
-	return status;							// Return The Status
+		// Mmkay, så opengl räknar koordinater från nedre vänstra
+		// hörnet. Undrar om den gode ola roterade alla texturer i
+		// tgaloader-versionen :D
+		// Aja, vi fixar.
+		char tp[3];
+		char *pixels = (char *) texture->pixels;
+		int w = texture->w * 3;
+		unsigned int size = texture->w * texture->h * 3;
+		for (int j = 0; j < size / 2; j += 3) {
+			memcpy(tp, &pixels[j], 3);
+			memcpy(&pixels[j], &pixels[size - j], 3);
+			memcpy(&pixels[size - j], tp, 3);
+		}
+		// Vafan, spegelvänt också?!
+		for (int j = 0; j < texture->h * w; j += w) {
+			for (int k = 0; k < w / 2; k += 3) {
+				memcpy(tp, &pixels[j + k], 3);
+				memcpy(&pixels[j + k], &pixels[j + w - k - 3], 3);
+				memcpy(&pixels[j + w - k - 3], tp, 3);
+			}
+		}
+
+		glGenTextures(1, &world.texIDs[i]);
+		glBindTexture(GL_TEXTURE_2D, world.texIDs[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, 3,
+				texture->w, texture->h, 0,
+				GL_BGR, GL_UNSIGNED_BYTE,
+				texture->pixels);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+				GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+				GL_LINEAR);
+
+		SDL_FreeSurface(texture);
+	}
+
+	return 1;							// Return The Status
 }
 
 void TimerInit()								// Initialize Our Timer (Get It Ready)
@@ -425,75 +426,78 @@ int LoadLevel()
 	// Bara att kopiera tillbaks...
 
 	// LADDA IN!!!!
+	
+	// Allocate them cubes!
+	world.map = (cube *)calloc(world.nrcubex * world.nrcubey, sizeof(struct cube));
+	if (world.map == NULL)  {
+		return FALSE;
+	}
 
 	int loop1 = 0, loop2 = 0;
 
-	for(loop1=0;loop1<nrcubex;loop1++)
-		for(loop2=0;loop2<nrcubey;loop2++) {
-			map[loop1][loop2].z=0.0f;
-			map[loop1][loop2].texturenr=0;
-			map[loop1][loop2].beskrivning="Testbeskrivning";
+	for(loop1=0;loop1<world.nrcubex;loop1++)
+		for(loop2=0;loop2<world.nrcubey;loop2++) {
+			map_cube(world, loop1, loop2).z=0.0f;
+			map_cube(world, loop1, loop2).texturenr=0;
+			map_cube(world, loop1, loop2).beskrivning="Testbeskrivning";
 		}
 
-	map[0][0].z=0.0f;
-	map[0][0].texturenr=1;
+	map_cube(world, 0, 0).z=0.0f;
+	map_cube(world, 0, 0).texturenr=1;
 
-	map[0][1].z=0.0f;
-	map[0][1].texturenr=1;
+	map_cube(world, 0, 1).z=0.0f;
+	map_cube(world, 0, 1).texturenr=1;
 
 	// Vägen -------------------------------
-	for(loop1=0;loop1<nrcubey;loop1++)
-		map[1][loop1].texturenr=2;
+	for(loop1=0;loop1<world.nrcubey;loop1++)
+		map_cube(world, 1, loop1).texturenr=2;
 
-	for(loop1=0;loop1<nrcubey;loop1++)
-		map[2][loop1].texturenr=3;
+	for(loop1=0;loop1<world.nrcubey;loop1++)
+		map_cube(world, 2, loop1).texturenr=3;
 
-	for(loop1=0;loop1<nrcubex;loop1++)
-		map[loop1][nrcubey-2].texturenr=8;
+	for(loop1=0;loop1<world.nrcubex;loop1++)
+		map_cube(world, loop1, world.nrcubey-2).texturenr=8;
 
-	for(loop1=2;loop1<nrcubex;loop1++)
-		map[loop1][nrcubey-3].texturenr=9;
+	for(loop1=2;loop1<world.nrcubex;loop1++)
+		map_cube(world, loop1, world.nrcubey-3).texturenr=9;
 
-	map[1][nrcubey-2].texturenr=5;
-	map[2][nrcubey-2].texturenr=6;
-	map[2][nrcubey-3].texturenr=7;
+	map_cube(world, 1, world.nrcubey-2).texturenr=5;
+	map_cube(world, 2, world.nrcubey-2).texturenr=6;
+	map_cube(world, 2, world.nrcubey-3).texturenr=7;
 
 
 	// "Väggen" runtomkring
-	for(loop1=0;loop1<nrcubey;loop1++) {
-		map[0][loop1].texturenr=4;
-		map[0][loop1].z=1.0f;
+	for(loop1=0;loop1<world.nrcubey;loop1++) {
+		map_cube(world, 0, loop1).texturenr=4;
+		map_cube(world, 0, loop1).z=1.0f;
 	}
 
-	for(loop1=0;loop1<nrcubey;loop1++) {
-		map[nrcubex-1][loop1].texturenr=4;
-		map[nrcubex-1][loop1].z=1.0f;
+	for(loop1=0;loop1<world.nrcubey;loop1++) {
+		map_cube(world, world.nrcubex-1, loop1).texturenr=4;
+		map_cube(world, world.nrcubex-1, loop1).z=1.0f;
 	}
 
-	for(loop1=0;loop1<nrcubex;loop1++) {
-		map[loop1][0].texturenr=4;
-		map[loop1][0].z=1.0f;
+	for(loop1=0;loop1<world.nrcubex;loop1++) {
+		map_cube(world, loop1, 0).texturenr=4;
+		map_cube(world, loop1, 0).z=1.0f;
 	}
-	for(loop1=0;loop1<nrcubex;loop1++) {
-		map[loop1][nrcubey-1].texturenr=4;
-		map[loop1][nrcubey-1].z=1.0f;
+	for(loop1=0;loop1<world.nrcubex;loop1++) {
+		map_cube(world, loop1, world.nrcubey-1).texturenr=4;
+		map_cube(world, loop1, world.nrcubey-1).z=1.0f;
 	}
 
 	// Vi lägger in lite buskar
-	for(loop1=1;loop1<(nrcubey/2-1);loop1+=2) {
-		map[nrcubex/2][loop1].texturenr=15;
-		map[nrcubex/2][loop1].z=1.0f;
+	for(loop1=1;loop1<(world.nrcubey/2-1);loop1+=2) {
+		map_cube(world, world.nrcubex/2, loop1).texturenr=15;
+		map_cube(world, world.nrcubex/2, loop1).z=1.0f;
 	}
 
 	// Vägen in till mitten och den fina credits saken där.
-	for(loop1=3;loop1<nrcubex/2;loop1++)
-		map[loop1][nrcubey/2].texturenr=7;
+	for(loop1=3;loop1<world.nrcubex/2;loop1++)
+		map_cube(world, loop1, world.nrcubey/2).texturenr=7;
 
-	map[nrcubex/2][nrcubey/2].texturenr=10;
-	map[nrcubex/2][nrcubey/2].z=2.0f;
-
-
-
+	map_cube(world, world.nrcubex/2, world.nrcubey/2).texturenr=10;
+	map_cube(world, world.nrcubex/2, world.nrcubey/2).z=2.0f;
 
 	return TRUE;
 }
@@ -607,9 +611,9 @@ int LoadCars()   // och gubbar.
 			srand(TimerGetTime()+einar);
 			einar = einar +1;
 			std::cout << einar << std::endl;
-			//std::cout << "J:" << (float)(rand() % nrcubex)*100.0f << ":J-" << std::endl;
-			gubbar[loop1].posx=(float)((rand() % nrcubex*bsize*2)*100)/100.0f;
-			gubbar[loop1].posy=(float)((rand() % nrcubey*bsize*2)*100)/100.0f;
+			//std::cout << "J:" << (float)(rand() % world.nrcubex)*100.0f << ":J-" << std::endl;
+			gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
+			gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
 			gubbar[loop1].angle=rand() % 360;
 			std::cout << "D: X:" << gubbar[loop1].posx << "Y:" << gubbar[loop1].posy << "-" << std::endl;
 
@@ -669,7 +673,7 @@ int LoadCars()   // och gubbar.
 */
 	// För att det finns massa som refererar till detta:
 	loop1=1;
-	glBindTexture(GL_TEXTURE_2D,texture[gubbar[loop1].ltexture2].texID);
+	glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[loop1].ltexture2]);
 
 	glBegin(GL_QUADS);
 
@@ -683,7 +687,7 @@ int LoadCars()   // och gubbar.
 	glEnd();
 
 	// Börja en ny glBegin för att vi ska kunna texturemappa huvudet och resten seperat...
-	glBindTexture(GL_TEXTURE_2D,texture[gubbar[loop1].ltexture].texID);
+	glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[loop1].ltexture]);
 
 	glBegin(GL_QUADS);
 
@@ -1074,8 +1078,8 @@ int CalcGameVars()
 					while(!bra) {
 						einar++;
 						srand(TimerGetTime()+einar);
-						gubbar[loop1].posx=(float)((rand() % nrcubex*bsize*2)*100)/100;
-						gubbar[loop1].posy=(float)((rand() % nrcubey*bsize*2)*100)/100;
+						gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
+						gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
 						gubbar[loop1].angle=rand() % 360;
 						bra=TRUE;
 					}
@@ -1163,9 +1167,9 @@ int CalcGameVars()
 
 	// Det kan tyckas vara onödigt att kolla alla kuber på banan... fixa så att den kollar bara de närmaste...
 	// kontrollera så att inte bilen krockar med en stor KUUB!
-	for(loop1=0 ;loop1<nrcubex;loop1++)
-		for(loop2=0;loop2<nrcubey;loop2++) {
-			if(map[loop1][loop2].z!=0.0f) {		// Om inte kuben är ett underlag...
+	for(loop1=0 ;loop1<world.nrcubex;loop1++)
+		for(loop2=0;loop2<world.nrcubey;loop2++) {
+			if(map_cube(world, loop1, loop2).z!=0.0f) {		// Om inte kuben är ett underlag...
 
 				if(bil.posx+tmpx+tmpbilx/2>=CalcMapPlace(loop1,loop2,0)-bsize && bil.posx+tmpx-tmpbilx/2<=CalcMapPlace(loop1,loop2,0)+bsize)
 					if(bil.posy+tmpy+tmpbily/2>=CalcMapPlace(loop1,loop2,1)-bsize && bil.posy+tmpy-tmpbily/2<=CalcMapPlace(loop1,loop2,1)+bsize) {
@@ -1264,9 +1268,9 @@ int CalcGameVars()
 		// Oj, oj, oj... precis när jag trodde att jag nått CPU toppen för en liten funktion...
 
 		for(int loop3=0 ;loop3<nrgubbar; loop3++)
-			for(loop1=0 ;loop1<nrcubex;loop1++)
-				for(int loop2=0;loop2<nrcubey;loop2++) {
-					if(map[loop1][loop2].z!=0.0f) {		// Om inte kuben är ett underlag...
+			for(loop1=0 ;loop1<world.nrcubex;loop1++)
+				for(int loop2=0;loop2<world.nrcubey;loop2++) {
+					if(map_cube(world, loop1, loop2).z!=0.0f) {		// Om inte kuben är ett underlag...
 
 						if(gubbar[loop3].posx+gubbar[loop3].tmpx+gubbar[loop3].x/2>=CalcMapPlace(loop1,loop2,0)-bsize && gubbar[loop3].posx+gubbar[loop3].tmpx-gubbar[loop3].x/2<=CalcMapPlace(loop1,loop2,0)+bsize)
 							if(gubbar[loop3].posy+gubbar[loop3].tmpy+gubbar[loop3].y/2>=CalcMapPlace(loop1,loop2,1)-bsize && gubbar[loop3].posy+gubbar[loop3].tmpy-gubbar[loop3].y/2<=CalcMapPlace(loop1,loop2,1)+bsize) {
@@ -1381,16 +1385,16 @@ int DrawGLScene()
 
 	// Ritar upp banan -----------------------------
 	float lp1bstmp,lp2bstmp,ztmp;
-	for(loop1=0; loop1<nrcubex; loop1++) {
-		for(loop2=0; loop2<nrcubey; loop2++) {
+	for(loop1=0; loop1<world.nrcubex; loop1++) {
+		for(loop2=0; loop2<world.nrcubey; loop2++) {
 
 
 			lp1bstmp=(float)loop1*(bsize*2);
 			lp2bstmp=(float)loop2*(bsize*2);
-			ztmp=map[loop1][loop2].z*(bsize*2);
+			ztmp=map_cube(world, loop1, loop2).z*(bsize*2);
 
 			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D,texture[map[loop1][loop2].texturenr].texID);
+			glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, loop1, loop2).texturenr]);
 
 			glBegin(GL_QUADS);
 			glTexCoord2f(0.0f, 0.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
@@ -1442,7 +1446,7 @@ int DrawGLScene()
 	glTranslatef(0.0f,0.0f,Distance+SpeedVar);
 	glRotatef((float)bil.angle,0.0f,0.0f,1.0f);
 
-	glBindTexture(GL_TEXTURE_2D,texture[bil.t1].texID);
+	glBindTexture(GL_TEXTURE_2D,world.texIDs[bil.t1]);
 
 	//glColor3f(1.0f,0.0f,1.0f);
 	glBegin(GL_QUADS);
@@ -1517,7 +1521,7 @@ int DrawGLScene()
 			} else {
 
 				// Är man överkörd står man nog inte upp längre... :) Det här blir bättre...
-				glBindTexture(GL_TEXTURE_2D,texture[gubbar[loop1].dtexture].texID);
+				glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[loop1].dtexture]);
 
 
 				glBegin(GL_QUADS);
@@ -1623,6 +1627,34 @@ void channel_finished(int channel) {
 
 int main()
 {
+
+
+	// C++ SUGER SÅ MYCKET!!!1
+	world.nrcubex = 20;
+	world.nrcubey = 20;
+	// De texturer som på nåt sätt ska laddas är:
+	char *texture_filenames[] = {
+		"test.tga",
+		"carroof.tga",
+		"road1.tga",
+		"road2.tga",
+		"building1.tga",
+		"road3.tga",
+		"road4.tga",
+		"road5.tga",
+		"road6.tga",
+		"road7.tga",
+		"dhcred.tga",
+		"gubbel.tga",
+		"gubbed.tga",
+		"gubbel2.tga",
+		"carroof2.tga",
+		"buske.tga"
+	};
+	world.texture_filenames = texture_filenames; // Vi lämnar aldrig detta
+						     // scope, så det funkar.
+						     // Jag lovar!
+	world.ntextures = sizeof(texture_filenames) / sizeof(char *);
 
 	// Här är den första delen av porten....
 

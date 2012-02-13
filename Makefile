@@ -1,10 +1,10 @@
 TARGETS=gta2k4lin
 
-CXX_SOURCES=main.cpp TGALoader.cpp
+CXX_SOURCES=main.cpp
 
 OBJS=$(subst,$(CXX_SOURCES),.cpp,.o)
 
-LIBRARIES=sdl glu x11 SDL_mixer
+LIBRARIES=sdl glu x11 SDL_mixer SDL_image
 
 CXXFLAGS=-O2 -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpermissive \
 				 $(shell pkg-config --cflags $(LIBRARIES))
@@ -21,7 +21,7 @@ clean:
 dist:
 	git archive --prefix=gta2k4lin/ HEAD | bzip2 > gta2k4lin-$(shell git describe --tags --always HEAD).tar.bz2
 
-gta2k4lin: main.o TGALoader.o
+gta2k4lin: main.o
 	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
 
 Makefile.depend: $(CXX_SOURCES)
