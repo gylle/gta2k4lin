@@ -8,4 +8,5 @@ core
 *.core
 
 .*.swp
+.*.swo
 *~
