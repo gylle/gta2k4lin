@@ -1,8 +1,12 @@
 TARGETS=gta2k4lin
 
+C_SOURCES=sound.c
 CXX_SOURCES=main.cpp
 
-OBJS=$(subst,$(CXX_SOURCES),.cpp,.o)
+CC=gcc
+CXX=g++
+
+OBJS=$(subst,$(CXX_SOURCES),.cpp,.o) $(subst,$(C_SOURCES),.c,.o)
 
 LIBRARIES=sdl glu x11 SDL_image
 
@@ -14,13 +18,13 @@ endif
 
 LIBS=$(shell pkg-config --libs $(LIBRARIES)) $(LIBS_EXTRA)
 
-CFLAGS=-O2 $(shell pkg-config --cflags $(LIBRARIES))
+CFLAGS=-O2 -Wall $(shell pkg-config --cflags $(LIBRARIES))
 
 CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpermissive
 
 .PHONY: default clean dist depend
 
-default: Makefile.depend $(TARGETS)
+default: $(TARGETS)
 
 clean:
 	rm -f *.o $(TARGETS) *.tar.bz2
@@ -31,10 +35,11 @@ dist:
 depend:
 	make -B Makefile.depend
 
-gta2k4lin: main.o
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
+gta2k4lin: main.o sound.o
+	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
 
 Makefile.depend: $(CXX_SOURCES)
-	$(CXX) -MM $(CXXFLAGS) $^ > Makefile.depend
+	$(CC) -MM $(CFLAGS) $^ > Makefile.depend
+	$(CXX) -MM $(CXXFLAGS) $^ >> Makefile.depend
 
 include Makefile.depend

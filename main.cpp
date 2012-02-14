@@ -37,9 +37,12 @@
 #include <sys/param.h>
 
 #include "SDL.h"
-#include "SDL_audio.h"
-#include "SDL_mixer.h"
 #include "SDL_image.h"
+#include "SDL_mixer.h"
+
+extern "C" {
+#include "sound.h"
+}
 
 int width = 640;
 int height = 480;
@@ -58,22 +61,6 @@ bool NoMusic=FALSE;
 bool NoSound=FALSE;
 bool NoBlend=TRUE;
 
-#define NUM_SOUNDS 10
-enum sounds {
-	aj0,
-	aj1,
-	brinner,
-	broms,
-	farlig,
-	krasch,
-	move,
-	respawn,
-	tut,
-	welcome,
-};
-Mix_Chunk *sound_chunks[NUM_SOUNDS];
-#define SAMPLE_PATH "data/ljud/"
-
 // Iallafall så är stommen för nätverket laggd...
 // Hmmm, det tar sig...
 
@@ -87,7 +74,6 @@ char TextEntered[256];
 int broms_in_progress = 0;
 int tut_channel = -1;
 int brinner_channel = -1;
-int background_channel = -1;
 
 
 // Skaffa FPS räknare... hur ska man gööra?
@@ -245,56 +231,6 @@ car mbil;		 // andra bilen i multiplayer
 GLfloat	zrot=0,xrot=0,yrot=0;
 GLfloat transx=0.0f, transy=0.0f;
 GLfloat Distance=-30.0f, SpeedVar, tmpSpeedVar;
-
-// LjYYYYd.
-
-int LoadSample(char *file, enum sounds sound) {
-	char path_buf[PATH_MAX];
-
-	snprintf(path_buf, PATH_MAX, "%s%s", SAMPLE_PATH,
-			file);
-
-	sound_chunks[sound] = Mix_LoadWAV(path_buf);
-	if (sound == NULL) {
-		fprintf(stderr, "Unable to load file '%s': %s\n", file, Mix_GetError());
-	}
-}
-
-int LoadSamples()				// Här loadar vi alla bananiga samples vi ska dra igång...
-{
-	int errors = 0;
-	errors += LoadSample("aj.ogg", aj0);
-	errors += LoadSample("aj2.ogg", aj1);
-	errors += LoadSample("brinner.ogg", brinner);
-	errors += LoadSample("broms.ogg", broms);
-	errors += LoadSample("farlig.ogg", farlig);
-	errors += LoadSample("krasch.ogg", krasch);
-	errors += LoadSample("move.ogg", move);
-	errors += LoadSample("respawn.ogg", respawn);
-	errors += LoadSample("tut.ogg", tut);
-	errors += LoadSample("welcome.ogg", welcome);
-
-	return errors;
-}
-
-int PlaySoundChannel(enum sounds sound, int channel)
-{
-	if (sound_chunks[sound] == NULL) {
-		fprintf(stderr, "Sound chunk is not loaded: %d\n", sound);
-	}
-
-	channel = Mix_PlayChannel(channel, sound_chunks[sound], 0);
-	if (channel == -1) {
-		fprintf(stderr, "Unable to play WAV file: %s\n", Mix_GetError());
-	}
-
-	return channel;
-}
-
-int PlaySound(enum sounds sound)
-{
-	return PlaySoundChannel(sound, -1);
-}
 
 float CalcMapPlace(int cx,int cy,bool xy)
 {
@@ -825,19 +761,12 @@ int RespondToKeys()
 			bil.t1=1;
 			mbil.Points++;
 
-			if (brinner_channel != -1) {
-				Mix_HaltChannel(brinner_channel);
-				brinner_channel = -1;
-			}
+			cont_sound_stop(brinner);
 			PlaySound(respawn);
 
 		}
 		else {
-			if (brinner_channel == -1 ||
-					! Mix_Playing(brinner_channel)) {
-
-				brinner_channel = PlaySound(brinner);
-			}
+			cont_sound_play(brinner);
 		}
 	}
 
@@ -1621,15 +1550,6 @@ int CheckaEvents()
 
 }
 
-void channel_finished(int channel) {
-
-	// quick exit
-	if (channel != background_channel)
-		return;
-
-	background_channel = PlaySoundChannel(farlig, background_channel);
-}
-
 int main()
 {
 
@@ -1690,28 +1610,17 @@ int main()
 	fullscreen=FALSE;							// Windowed Mode
 
 
-	int audio_rate = 22050;
-	Uint16 audio_format = AUDIO_S16SYS;
-	int audio_channels = 1;
-	int audio_buffers = 4096;
-	if(Mix_OpenAudio(audio_rate, audio_format, audio_channels, audio_buffers) != 0) {
-		fprintf(stderr, "Unable to initialize audio: %s\n", Mix_GetError());
-		exit(1);
-	}
-
 	InitGL();
 	LoadCars();
 	LoadLevel();
-	LoadSamples();
-
 
 	// HUVUDLOOPEN!!! Detta är själva spelet!
 	// TODO: Implementera frameskip...
 	Uint32 TimerTicks;
 	Uint32 tmpTicks;
 
-	Mix_ChannelFinished(channel_finished);
-	background_channel = PlaySound(welcome);
+
+	init_sound();
 
 	while(!done)
 	{
