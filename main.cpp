@@ -249,7 +249,12 @@ GLfloat Distance=-30.0f, SpeedVar, tmpSpeedVar;
 // LjYYYYd.
 
 int LoadSample(char *file, enum sounds sound) {
-	sound_chunks[sound] = Mix_LoadWAV(file);
+	char path_buf[PATH_MAX];
+
+	snprintf(path_buf, PATH_MAX, "%s%s", SAMPLE_PATH,
+			file);
+
+	sound_chunks[sound] = Mix_LoadWAV(path_buf);
 	if (sound == NULL) {
 		fprintf(stderr, "Unable to load file '%s': %s\n", file, Mix_GetError());
 	}
@@ -258,16 +263,16 @@ int LoadSample(char *file, enum sounds sound) {
 int LoadSamples()				// Här loadar vi alla bananiga samples vi ska dra igång...
 {
 	int errors = 0;
-	errors += LoadSample(SAMPLE_PATH "aj.ogg", aj0);
-	errors += LoadSample(SAMPLE_PATH "aj2.ogg", aj1);
-	errors += LoadSample(SAMPLE_PATH "brinner.ogg", brinner);
-	errors += LoadSample(SAMPLE_PATH "broms.ogg", broms);
-	errors += LoadSample(SAMPLE_PATH "farlig.ogg", farlig);
-	errors += LoadSample(SAMPLE_PATH "krasch.ogg", krasch);
-	errors += LoadSample(SAMPLE_PATH "move.ogg", move);
-	errors += LoadSample(SAMPLE_PATH "respawn.ogg", respawn);
-	errors += LoadSample(SAMPLE_PATH "tut.ogg", tut);
-	errors += LoadSample(SAMPLE_PATH "welcome.ogg", welcome);
+	errors += LoadSample("aj.ogg", aj0);
+	errors += LoadSample("aj2.ogg", aj1);
+	errors += LoadSample("brinner.ogg", brinner);
+	errors += LoadSample("broms.ogg", broms);
+	errors += LoadSample("farlig.ogg", farlig);
+	errors += LoadSample("krasch.ogg", krasch);
+	errors += LoadSample("move.ogg", move);
+	errors += LoadSample("respawn.ogg", respawn);
+	errors += LoadSample("tut.ogg", tut);
+	errors += LoadSample("welcome.ogg", welcome);
 
 	return errors;
 }
