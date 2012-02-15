@@ -24,6 +24,6 @@ int init_sound();
 
 void cont_sound_play(enum sounds sound);
 
-void cont_sound_stop(enum sounds sound);
+void cont_sound_stop(enum sounds sound, int halt);
 
 #endif

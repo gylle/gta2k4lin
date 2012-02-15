@@ -108,7 +108,7 @@ void cont_sound_play(enum sounds sound) {
 
 }
 
-void cont_sound_stop(enum sounds sound) {
+void cont_sound_stop(enum sounds sound, int halt) {
 	int i, channel;
 
 	/* Halt and free slot */
@@ -117,7 +117,8 @@ void cont_sound_stop(enum sounds sound) {
 				cont_sounds[i].channel != -1) {
 			channel = cont_sounds[i].channel;
 			cont_sounds[i].channel = -1;
-			Mix_HaltChannel(channel);
+			if (halt)
+				Mix_HaltChannel(channel);
 		}
 	}
 

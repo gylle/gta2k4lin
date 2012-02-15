@@ -38,7 +38,6 @@
 
 #include "SDL.h"
 #include "SDL_image.h"
-#include "SDL_mixer.h"
 
 extern "C" {
 #include "sound.h"
@@ -72,9 +71,6 @@ bool Server=FALSE;			// Om Server, annars klient.
 char TextEntered[256];
 
 int broms_in_progress = 0;
-int tut_channel = -1;
-int brinner_channel = -1;
-
 
 // Skaffa FPS räknare... hur ska man gööra?
 
@@ -761,7 +757,7 @@ int RespondToKeys()
 			bil.t1=1;
 			mbil.Points++;
 
-			cont_sound_stop(brinner);
+			cont_sound_stop(brinner, 1);
 			PlaySound(respawn);
 
 		}
@@ -810,12 +806,10 @@ int RespondToKeys()
 
 	if(keys[SDLK_TAB]) {
 		PressedB[3]='1';
-		if (tut_channel == -1 || ! Mix_Playing(tut_channel)) {
-			tut_channel = PlaySound(tut);
-		}
+		cont_sound_play(tut);
 	}
 	else {
-		tut_channel = -1;
+		cont_sound_stop(tut, 0);
 	}
 
 	float sttmp;
