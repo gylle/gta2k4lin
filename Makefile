@@ -1,7 +1,7 @@
 TARGETS=gta2k4lin
 
-C_SOURCES=sound.c
-CXX_SOURCES=main.cpp
+C_SOURCES=src/sound.c
+CXX_SOURCES=src/main.cpp
 
 CC=gcc
 CXX=g++
@@ -18,7 +18,7 @@ endif
 
 LIBS=$(shell pkg-config --libs $(LIBRARIES)) $(LIBS_EXTRA)
 
-CFLAGS=-O2 -Wall $(shell pkg-config --cflags $(LIBRARIES))
+CFLAGS=-O2 -Wall -I./src $(shell pkg-config --cflags $(LIBRARIES))
 
 CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpermissive
 
@@ -27,7 +27,7 @@ CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpe
 default: $(TARGETS)
 
 clean:
-	rm -f *.o $(TARGETS) *.tar.bz2
+	rm -f src/*.o $(TARGETS) *.tar.bz2
 
 dist:
 	git archive --prefix=gta2k4lin/ HEAD | bzip2 > gta2k4lin-$(shell git describe --tags --always HEAD).tar.bz2
@@ -35,7 +35,7 @@ dist:
 depend:
 	make -B Makefile.depend
 
-gta2k4lin: main.o sound.o
+gta2k4lin: src/main.o src/sound.o
 	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
 
 Makefile.depend: $(CXX_SOURCES)
