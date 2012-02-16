@@ -14,11 +14,9 @@ enum sounds {
 	welcome,
 };
 
-int LoadSamples();
+int play_sound_channel(enum sounds sound, int channel);
 
-int PlaySoundChannel(enum sounds sound, int channel);
-
-int PlaySound(enum sounds sound);
+int play_sound(enum sounds sound);
 
 int init_sound();
 

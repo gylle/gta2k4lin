@@ -758,7 +758,7 @@ int RespondToKeys()
 			mbil.Points++;
 
 			cont_sound_stop(brinner, 1);
-			PlaySound(respawn);
+			play_sound(respawn);
 
 		}
 		else {
@@ -790,7 +790,7 @@ int RespondToKeys()
 			bil.curspeed=0.0f;
 
 		if (!broms_in_progress) {
-			PlaySound(broms);
+			play_sound(broms);
 			broms_in_progress = 1;
 		}
 
@@ -1105,7 +1105,7 @@ int CalcGameVars()
 						tmpx=0.0f; tmpy=0.0f;
 						// EJJ, SÅ HÄR SKA DET JU VARA!!!!!
 						bil.curspeed=-bil.curspeed;
-						PlaySound(krasch);
+						play_sound(krasch);
 						player.krockar++;
 						//std::cout << "KROCK!";
 
@@ -1167,9 +1167,9 @@ int CalcGameVars()
 							struct timeval tv;
 							gettimeofday(&tv, NULL);
 							if(tv.tv_usec % 2)
-								PlaySound(aj0);
+								play_sound(aj0);
 							else
-								PlaySound(aj1);
+								play_sound(aj1);
 							player.runovers++;
 							/*} else if(bil.curspeed<1.0f && bil.curspeed>-1.0f) { // det ska vara så att man skjuter dem framför om man kör på dem för sakta...
 							  gubbar[loop1].tmpx=tmpx;
@@ -1177,7 +1177,7 @@ int CalcGameVars()
 					} else {
 						//gubbar[loop1].angle=-gubbar[loop1].angle;
 						gubbar[loop1].angle+=180;
-						PlaySound(move);
+						play_sound(move);
 					}
 					}
 

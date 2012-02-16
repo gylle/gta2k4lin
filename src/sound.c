@@ -22,7 +22,7 @@ struct cont_sound cont_sounds[NUM_CHANNELS];
 
 int background_channel = -1;
 
-int LoadSample(char *file, enum sounds sound) {
+int load_sample(char *file, enum sounds sound) {
 	char path_buf[PATH_MAX];
 
 	snprintf(path_buf, PATH_MAX, "%s%s", SAMPLE_PATH,
@@ -36,24 +36,24 @@ int LoadSample(char *file, enum sounds sound) {
 	return 0;
 }
 
-int LoadSamples()				// Här loadar vi alla bananiga samples vi ska dra igång...
+int load_samples()				// Här loadar vi alla bananiga samples vi ska dra igång...
 {
 	int errors = 0;
-	errors += LoadSample("aj.ogg", aj0);
-	errors += LoadSample("aj2.ogg", aj1);
-	errors += LoadSample("brinner.ogg", brinner);
-	errors += LoadSample("broms.ogg", broms);
-	errors += LoadSample("farlig.ogg", farlig);
-	errors += LoadSample("krasch.ogg", krasch);
-	errors += LoadSample("move.ogg", move);
-	errors += LoadSample("respawn.ogg", respawn);
-	errors += LoadSample("tut.ogg", tut);
-	errors += LoadSample("welcome.ogg", welcome);
+	errors += load_sample("aj.ogg", aj0);
+	errors += load_sample("aj2.ogg", aj1);
+	errors += load_sample("brinner.ogg", brinner);
+	errors += load_sample("broms.ogg", broms);
+	errors += load_sample("farlig.ogg", farlig);
+	errors += load_sample("krasch.ogg", krasch);
+	errors += load_sample("move.ogg", move);
+	errors += load_sample("respawn.ogg", respawn);
+	errors += load_sample("tut.ogg", tut);
+	errors += load_sample("welcome.ogg", welcome);
 
 	return errors;
 }
 
-int PlaySoundChannel(enum sounds sound, int channel)
+int play_sound_channel(enum sounds sound, int channel)
 {
 	if (sound_chunks[sound] == NULL) {
 		fprintf(stderr, "Sound chunk is not loaded: %d\n", sound);
@@ -67,9 +67,9 @@ int PlaySoundChannel(enum sounds sound, int channel)
 	return channel;
 }
 
-int PlaySound(enum sounds sound)
+int play_sound(enum sounds sound)
 {
-	return PlaySoundChannel(sound, -1);
+	return play_sound_channel(sound, -1);
 }
 
 void channel_finished(int channel) {
@@ -78,7 +78,7 @@ void channel_finished(int channel) {
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		if (cont_sounds[i].channel == channel) {
 			cont_sounds[i].channel =
-				PlaySoundChannel(cont_sounds[i].sound,
+				play_sound_channel(cont_sounds[i].sound,
 						cont_sounds[i].channel);
 			return;
 		}
@@ -101,7 +101,7 @@ void cont_sound_play(enum sounds sound) {
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		if (cont_sounds[i].channel == -1) {
 			cont_sounds[i].sound = sound;
-			cont_sounds[i].channel = PlaySound(sound);
+			cont_sounds[i].channel = play_sound(sound);
 			return;
 		}
 	}
@@ -138,13 +138,13 @@ int init_sound() {
 
 	Mix_ChannelFinished(channel_finished);
 
-	LoadSamples();
+	load_samples();
 
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		cont_sounds[i].channel = -1;
 	}
 
-	PlaySound(welcome);
+	play_sound(welcome);
 	cont_sound_play(farlig);
 
 	return 0;
