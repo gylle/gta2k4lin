@@ -1646,8 +1646,9 @@ int main()
 
 		if(keys[SDLK_ESCAPE])
 		{
-			std::cout << "Escape tryckt, avslutar...";
+			std::cout << "Escape tryckt, avslutar..." << std::endl;
 			SDL_Quit();
+			done = 1;
 		}
 
 	}
