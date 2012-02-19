@@ -114,8 +114,6 @@ void *loop(void *args) {
 	int32_t s32;
 	struct proto_move pmove;
 
-
-
 	for (;;) {
 		/* Assume that this is atomic enough */
 		if (pos_changed) {
@@ -160,9 +158,9 @@ int network_connect(char *addr, unsigned port, char *nick, int proto) {
 					    all possible combinations */
 	/* Force protocol? */
 	if (proto == 4)
-		hints.ai_flags = AF_INET;
+		hints.ai_family = AF_INET;
 	if (proto == 6)
-		hints.ai_flags = AF_INET6;
+		hints.ai_family = AF_INET6;
 	hints.ai_flags = AI_IDN | AI_CANONIDN;
 	r = getaddrinfo(addr, NULL, &hints, &server_addr_info_list);
 	if (r) {
