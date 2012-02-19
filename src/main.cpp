@@ -73,23 +73,16 @@ int height = 480;
 int bpp = 32; // Vi gillar 32 här dåva
 float bsize=5.0f;
 
-
-// Hymmz, dessa verkar inte finnas i linux...
-bool TRUE=true;
-bool FALSE=false;
-
 bool keys[350];			// Array Used For The Keyboard Routine
-bool active=TRUE;		// Window Active Flag Set To TRUE By Default
-bool fullscreen=TRUE;	// Fullscreen Flag Set To Fullscreen Mode By Default
 
-bool NoBlend=TRUE;
+bool NoBlend=true;
 
 // Iallafall så är stommen för nätverket laggd...
 // Hmmm, det tar sig...
 
 // Enable:as bara ifall man ska försöka få igång nätverket...
-bool Network=FALSE;			// Nätverk eller singelplayer...
-bool Server=FALSE;			// Om Server, annars klient.
+bool Network=false;			// Nätverk eller singelplayer...
+bool Server=false;			// Om Server, annars klient.
 
 char *server_addr = NULL;
 unsigned server_port = 9378;
@@ -102,12 +95,7 @@ int broms_in_progress = 0;
 // Skaffa FPS räknare... hur ska man gööra?
 
 
-// Temporära grejjer!!!
-bool dod=FALSE;
-int krocktimer=20;
-int tmprand;
-
-bool debugBlend=FALSE;
+bool debugBlend=false;
 float blendcolor;
 
 
@@ -118,7 +106,7 @@ GLuint	GubbeDispList;
 
 // Fina spel grejjer!
 const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
-const int nrgubbar=100;
+const int nrgubbar=1000;
 
 
 // ej, det här är typ.nätwärch stuff. (Vilket språk jag har!)
@@ -377,7 +365,7 @@ int LoadLevel()
 	// Allocate them cubes!
 	world.map = (cube *)calloc(world.nrcubex * world.nrcubey, sizeof(struct cube));
 	if (world.map == NULL)  {
-		return FALSE;
+		return false;
 	}
 
 	int loop1 = 0, loop2 = 0;
@@ -446,7 +434,7 @@ int LoadLevel()
 	map_cube(world, world.nrcubex/2, world.nrcubey/2).texturenr=10;
 	map_cube(world, world.nrcubex/2, world.nrcubey/2).z=2.0f;
 
-	return TRUE;
+	return true;
 }
 
 int LoadCars()   // och gubbar.
@@ -479,7 +467,7 @@ int LoadCars()   // och gubbar.
 
 	for(loop1=0;loop1<nrgubbar;loop1++) {
 
-		gubbar[loop1].alive=TRUE;
+		gubbar[loop1].alive=true;
 
 		gubbar[loop1].curspeed=0.0f;
 		gubbar[loop1].maxspeed=0.3f;
@@ -567,7 +555,7 @@ int LoadCars()   // och gubbar.
 	glEndList();
 
 
-	return TRUE;
+	return true;
 }
 
 int SetupNet()
@@ -594,7 +582,7 @@ int InitGL()								//		 All Setup For OpenGL Goes Here
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
 
-	Varitherebefore=TRUE;
+	Varitherebefore=true;
 
 	float ratio = (float) width / (float) height;
 
@@ -630,7 +618,7 @@ int InitGL()								//		 All Setup For OpenGL Goes Here
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
 
-	return TRUE;										// Initialization Went OK
+	return true;										// Initialization Went OK
 }
 
 int RespondToKeys()
@@ -682,11 +670,11 @@ int RespondToKeys()
 		}
 	}
 
-	bool brakepressed=FALSE;
+	bool brakepressed=false;
 
 	if(keys[SDLK_SPACE]) {
 		PressedB[2]='1';
-		brakepressed=TRUE;
+		brakepressed=true;
 		if(bil.curspeed<0.0f && bil.curspeed>-bil.bromsspeed)
 			bil.curspeed=0.0f;
 		if(bil.curspeed>0.0f && bil.curspeed<bil.bromsspeed)
@@ -768,9 +756,9 @@ int RespondToKeys()
 		NoBlend=!NoBlend;
 
 	if(keys[SDLK_F2]) {
-		debugBlend=TRUE;
+		debugBlend=true;
 	} else {
-		debugBlend=FALSE;
+		debugBlend=false;
 	}
         if(keys[SDLK_t]) {
             hud_show_input_field(1);
@@ -874,7 +862,6 @@ int CalcGameVars()
 	// Styr de datorkontrollerade gubbarna (och senare även bilar?)
 	// ----------------------------------------------------
 	// Nej, jag har bestämt mig. Vi stänger av gubbarna när vi kör med networch...
-	//int tmprand;
 
 	int einar=0;
 
@@ -886,7 +873,7 @@ int CalcGameVars()
 			srand(SDL_GetTicks()+loop1);		// det är jobbigt om gubbarna flyttar på sig så fort man svänger bilen...
 
 			if(gubbar[loop1].alive) {
-				tmprand=rand() % 100; // Ejjj, det wooorkar...
+				int tmprand=rand() % 100; // Ejjj, det wooorkar...
 
 				if(tmprand==0 && tmprand<3)  // gubben ska bara vrida sig fååå gånger..
 					gubbar[loop1].angle+=10;
@@ -904,7 +891,7 @@ int CalcGameVars()
 
 				if(gubbar[loop1].atimer>=gubbtid) {   // Jag antar att man borde randomiza ut platsen igen...
 					gubbar[loop1].atimer=0;
-					gubbar[loop1].alive=TRUE;
+					gubbar[loop1].alive=true;
 
 					einar++;
 					srand(SDL_GetTicks()+einar);
@@ -1144,15 +1131,6 @@ int CalcGameVars()
 	if(tmpSpeedVar<SpeedVar)
 		SpeedVar-=0.4f;
 
-	if(dod) {
-		krocktimer--;
-		if(!krocktimer) {
-			krocktimer=20;
-			dod=FALSE;
-
-		}
-	}
-
 
 	transx=-bil.posx;
 	transy=-bil.posy;
@@ -1173,7 +1151,7 @@ int CalcGameVars()
 
 
 
-	return TRUE;
+	return true;
 }
 
 int DrawGLScene()
@@ -1639,8 +1617,6 @@ int main(int argc, char *argv[])
 		std::cout << "EInar";
 		exit(1);
 	}
-
-	fullscreen=FALSE;							// Windowed Mode
 
 	InitGL();
 	LoadCars();
