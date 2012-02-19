@@ -71,6 +71,7 @@ extern "C" {
 int width = 640;
 int height = 480;
 int bpp = 32; // Vi gillar 32 här dåva
+float bsize=5.0f;
 
 
 // Hymmz, dessa verkar inte finnas i linux...
@@ -167,8 +168,42 @@ struct car {
 	// Poäng. I Multiplayer spel hur många "frags" man har...
 	int Points;
 
-
 };
+
+void init_car(struct car *bil) {
+    // Ladda en standard bil...
+
+    bil->x=3;
+    bil->y=5;
+    bil->z=2;
+
+    bil->helhet=100;
+
+    bil->posx=10;
+    bil->posy=10;
+    bil->posz=bsize; // Ska nog inte initialiseras här..
+
+    bil->t1=1;
+    bil->t2=1;
+    bil->t3=1;
+    bil->t4=1;
+
+    bil->maxspeed=2.0f;
+    bil->curspeed=0.0f;
+    bil->accspeed=0.20f;
+    bil->maxbspeed=-1.0f;
+    bil->bromsspeed=0.3f;
+    bil->speeddown=0.10f;
+    // Orginal värdet
+    // bil->turnspeed=6;
+    // Nytt värde, den svänger trotsallt lite segt...
+    bil->turnspeed=8;
+
+    bil->angle=0;
+
+    bil->Points=0;
+
+}
 
 struct gubbe {
 	// Storleken:
@@ -213,7 +248,6 @@ gubbe gubbar[nrgubbar];
 spelare player;
 
 
-float bsize=5.0f;
 
 // Storleken på banan skulle behövas laddas in från en fil, men för tillfället vet jag inte riktigt hur det skulle gå till...
 
@@ -428,65 +462,9 @@ int LoadLevel()
 
 int LoadCars()   // och gubbar.
 {
-	// Ladda en standard bil...
 
-	bil.x=3;
-	bil.y=5;
-	bil.z=2;
-
-	bil.helhet=100;
-
-	bil.posx=10;
-	bil.posy=10;
-	bil.posz=bsize; // Ska nog inte initialiseras här..
-
-	bil.t1=1;
-	bil.t2=1;
-	bil.t3=1;
-	bil.t4=1;
-
-	bil.maxspeed=2.0f;
-	bil.curspeed=0.0f;
-	bil.accspeed=0.20f;
-	bil.maxbspeed=-1.0f;
-	bil.bromsspeed=0.3f;
-	bil.speeddown=0.10f;
-	// Orginal värdet
-	// bil.turnspeed=6;
-	// Nytt värde, den svänger trotsallt lite segt...
-	bil.turnspeed=8;
-
-	bil.angle=0;
-
-	bil.Points=0;
-
-	// "Nätverks"-bilen
-	mbil.x=3;
-	mbil.y=5;
-	mbil.z=2;
-
-	mbil.helhet=100;
-
-	mbil.posx=10;
-	mbil.posy=10;
-	mbil.posz=bsize; // Ska nog inte initialiseras här..
-
-	mbil.t1=1;
-	mbil.t2=1;
-	mbil.t3=1;
-	mbil.t4=1;
-
-	mbil.maxspeed=2.0f;
-	mbil.curspeed=0.0f;
-	mbil.accspeed=0.20f;
-	mbil.maxbspeed=-1.0f;
-	mbil.bromsspeed=0.3f;
-	mbil.speeddown=0.10f;
-	mbil.turnspeed=8;
-
-	mbil.angle=0;
-
-	mbil.Points=0;
+	init_car(&bil);
+	init_car(&mbil); // "Nätverks"-bilen
 
 	if(Network) {
 		if(Server) {
