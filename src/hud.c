@@ -39,6 +39,7 @@
 struct chat_line {
     struct chat_line *next, *prev;
     SDL_Surface *surface;
+    Uint32 timestamp;
 };
 
 struct hud_data_struct {
@@ -62,6 +63,7 @@ static struct hud_data_struct *hud_data;
 static void chat_line_add(SDL_Surface *line) {
     struct chat_line *new_line = malloc(sizeof(struct chat_line));
     new_line->surface = line;
+    new_line->timestamp = SDL_GetTicks();
     new_line->prev = NULL;
     new_line->next = hud_data->chatlines;
 
@@ -132,12 +134,13 @@ static void finalize_hud() {
     static int chat_min_x = 10;
     static int chat_min_y = 10;
     static int chat_max_y = HUD_IMAGE_H - 100;
+    static int chat_fade_delay = 10000;
     SDL_Rect hud_rect = {chat_min_x, chat_max_y, 0, 0}; /* Botten */
 
     struct chat_line *cl = hud_data->chatlines;
-    while(cl) {
-        hud_rect.y -= cl->surface->h;
-        if(hud_rect.y < chat_min_y) {
+    Uint32 time_now = SDL_GetTicks();
+    for(; cl; cl = cl->next) {
+        if(hud_rect.y - cl->surface->h < chat_min_y) {
 
             /* Dumpa det som inte får plats */
             if(cl->prev == NULL)
@@ -149,14 +152,18 @@ static void finalize_hud() {
             break;
         }
 
+        if(!hud_data->show_input_field && (time_now - cl->timestamp >= chat_fade_delay)) {
+            /* We need to go through the rest anyway to keep the list clean */
+            continue;
+        }
+
+        hud_rect.y -= cl->surface->h;
         hud_rect.w = min(HUD_IMAGE_W-hud_rect.x, cl->surface->w);
         hud_rect.h = cl->surface->h;
 
         if( SDL_BlitSurface(cl->surface, NULL, hud_data->surface, &hud_rect) == -1 ) {
             printf("SDL_BlitSurface failed.");
         }
-
-        cl = cl->next;
     }
 
     /* Input field */
