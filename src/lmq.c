@@ -1,7 +1,6 @@
 /*
- * gta2k4lin
+ * lmq - process-local messaging queues
  *
- * Copyright David Hedberg  2001,2012
  * Copyright Jonas Eriksson 2012
  *
  *
