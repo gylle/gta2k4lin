@@ -20,7 +20,9 @@
  *
  */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -71,7 +73,13 @@ extern int errno;
 
 int sock;
 
-struct proto_move {
+struct proto_move_send {
+	float x, y, z;
+	int angle;
+} __attribute__((packed));
+
+struct proto_move_recv {
+	uint32_t id;
 	float x, y, z;
 	int angle;
 } __attribute__((packed));
@@ -122,7 +130,110 @@ ssize_t recv_exact(int sock, void *b, ssize_t len, int flags) {
 }
 
 int handle_data(char *buf, size_t size) {
-	return 0;
+	uint16_t u16;
+	uint32_t u32;
+	uint8_t u8;
+	uint16_t event;
+	size_t consumed = 0;
+	struct proto_move_recv pmove;
+	char mbuf[2048];
+	unsigned long id;
+	unsigned len;
+
+	if (size < 2)
+		return 0;
+
+	/*
+	int i;
+	for (i=0; i<size; i++)
+		printf("0x%02x ", buf[i]);
+	printf("\n");
+	*/
+	
+	memcpy(&u16, buf, 2);
+	event = ntohs(u16);
+
+	switch (event) {
+	case PROTO_MOVE:
+		if (size < sizeof(pmove) + 2)
+			return 0;
+
+		memcpy(&pmove, &buf[2], sizeof(pmove));
+
+		consumed = sizeof(pmove) + 2;
+		break;
+	case PROTO_AMSG:
+		if (size < 4 + 2)
+			return 0;
+
+		memcpy(&u32, &buf[2], 4);
+		id = ntohl(u32);
+		memcpy(&u16, &buf[6], 2);
+		len = ntohs(u16);
+
+		if (size < (6 + len))
+			return 0;
+
+		memcpy(mbuf, &buf[8], len);
+		mbuf[len] = 0;
+
+		printf("User with id %lu just said: '%s'\n", id, mbuf);
+		lmq_send(&amsg_outgress, mbuf, len + 1, 0);
+
+		consumed = len + 8;
+		break;
+	case PROTO_SMSG:
+		if (size < 2 + 2)
+			return 0;
+
+		memcpy(&u16, &buf[2], 2);
+		len = ntohs(u16);
+
+		if (size < (4 + len))
+			return 0;
+
+		memcpy(mbuf, &buf[4], len);
+		mbuf[len] = 0;
+		printf("Server just said: '%s'\n", mbuf);
+		lmq_send(&smsg_outgress, mbuf, len + 1, 0);
+
+		consumed = len + 4;
+		break;
+	case PROTO_NEW_USER:
+		if (size < 4 + 2)
+			return 0;
+
+		memcpy(&u32, &buf[2], 4);
+		id = ntohl(u32);
+		memcpy(&u8, &buf[6], 2);
+		len = u8;
+
+		if (size < (7 + len))
+			return 0;
+
+		memcpy(mbuf, &buf[7], len);
+		mbuf[len] = 0;
+		printf("User %s with id %lu just joined\n", mbuf, id);
+
+		consumed = len + 7;
+		break;
+	case PROTO_DROPPED_USER:
+		if (size < 2 + 2)
+			return 0;
+
+		memcpy(&u32, &buf[2], 4);
+		id = ntohl(u32);
+		
+		printf("User id %lu just left\n", id);
+
+		consumed = 6;
+		break;
+	default:
+		fprintf(stderr, "Konstig data, här. { 0x%02x, 0x%02x }\n",
+				buf[0], buf[1]);
+	}
+
+	return consumed;
 }
 
 /* This should be large enough to hold the biggest message size, which I
@@ -135,10 +246,7 @@ void *loop(void *arg) {
 	char buf[1024];
 	size_t rbufpos = 0;
 	uint16_t u16;
-	int16_t s16;
-	uint32_t u32;
-	int32_t s32;
-	struct proto_move pmove;
+	struct proto_move_send pmove;
 	struct pollfd fds[8];
 	int nfds;
 	int r;
@@ -166,8 +274,6 @@ void *loop(void *arg) {
 				u16 = htons(r);
 				memcpy(&sbuf[2], &u16, 2);
 				memcpy(&sbuf[4], buf, r);
-				buf[r+1]=0;printf("Sent amsg '%s' %d\n", buf,
-						r);
 				if (send_all(sock, sbuf, r + 4, 0) < 0) {
 					fprintf(stderr, "Unable to send amsg: %s\n",
 							strerror(errno));
@@ -191,16 +297,23 @@ void *loop(void *arg) {
 						strerror(r));
 				return NULL;
 			}
-			rbufpos += r;
 
-			/* Alright, let's see if we have any parseable data */
-			while ((r = handle_data(rbuf, rbufpos)) > 0);
+			if (r > 0) {
+				rbufpos += r;
 
-			/* Remove the things we have handled */
-			if (r != 0 && r != rbufpos) {
-				memmove(rbuf, &rbuf[r], rbufpos - r);
+				/* Alright, let's see if we have any parseable
+				 * data */
+				int c = 0;
+				while ((r = handle_data(&rbuf[c], rbufpos - c)) > 0) {
+					c += r;
+				}
+
+				/* Remove the things we have handled */
+				if (c != 0 && c != rbufpos) {
+					memmove(rbuf, &rbuf[c], rbufpos - c);
+				}
+				rbufpos -= c;
 			}
-			rbufpos -= r;
 		}
 
 		/* position to send */
