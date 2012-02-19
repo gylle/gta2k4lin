@@ -236,7 +236,7 @@ int handle_data(char *buf, size_t size) {
 		consumed = sizeof(pmove) + 2;
 		break;
 	case PROTO_AMSG:
-		if (size < 4 + 2)
+		if (size < 6 + 2)
 			return 0;
 
 		memcpy(&u32, &buf[2], 4);
@@ -244,7 +244,7 @@ int handle_data(char *buf, size_t size) {
 		memcpy(&u16, &buf[6], 2);
 		len = ntohs(u16);
 
-		if (size < (6 + len))
+		if (size < (8 + len))
 			return 0;
 
 		memcpy(mbuf, &buf[8], len);
@@ -274,7 +274,7 @@ int handle_data(char *buf, size_t size) {
 		consumed = len + 4;
 		break;
 	case PROTO_NEW_USER:
-		if (size < 4 + 2)
+		if (size < 5 + 2)
 			return 0;
 
 		memcpy(&u32, &buf[2], 4);
@@ -294,7 +294,7 @@ int handle_data(char *buf, size_t size) {
 		consumed = len + 7;
 		break;
 	case PROTO_DROPPED_USER:
-		if (size < 2 + 2)
+		if (size < 4 + 2)
 			return 0;
 
 		memcpy(&u32, &buf[2], 4);
