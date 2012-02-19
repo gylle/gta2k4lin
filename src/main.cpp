@@ -81,8 +81,6 @@ bool keys[350];			// Array Used For The Keyboard Routine
 bool active=TRUE;		// Window Active Flag Set To TRUE By Default
 bool fullscreen=TRUE;	// Fullscreen Flag Set To Fullscreen Mode By Default
 
-bool NoMusic=FALSE;
-bool NoSound=FALSE;
 bool NoBlend=TRUE;
 
 // Iallafall så är stommen för nätverket laggd...
@@ -97,8 +95,6 @@ unsigned server_port = 9378;
 char *nick = NULL;
 int proto_only = 0;
 
-// I vilkenservervillduanslutatill-rutan?
-char TextEntered[256];
 
 int broms_in_progress = 0;
 
@@ -107,10 +103,8 @@ int broms_in_progress = 0;
 
 // Temporära grejjer!!!
 bool dod=FALSE;
-bool sant=FALSE;
 int krocktimer=20;
 int tmprand;
-float debug1,debug2;	// Dessa kan jag nog ge lite olika uppgifter...
 
 bool debugBlend=FALSE;
 float blendcolor;
@@ -124,8 +118,6 @@ GLuint	GubbeDispList;
 
 
 // Fina spel grejjer!
-float speed=50.0f;		// Aj aj... det här var inte bra...
-
 const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
 const int nrgubbar=100;
 
@@ -142,20 +134,10 @@ const int nrgubbar=100;
    int nRet;
    */
 
-// Den här är för stor, tar mycket bandbredd. (tror jag)
-//char BuFFer[256];
-char BuFFer[16];
-
 // En array bestående av 1:or och 0:or... alla knappar...
 char PressedB[8];
 // En till, fast för knapparna _mottagna_ från andra datorn...
 char mPressedB[8];
-
-int IBuf;
-float FBuf;
-
-// I vilken rikting den andra bilen befinner sig...
-char Riktning[2];
 
 struct cube {
 	// Vilket plan den är på. 0.0f är det man går/åker på,
@@ -253,8 +235,7 @@ car bil;
 car mbil;		 // andra bilen i multiplayer
 
 
-// Bra att ha för att rotera och ha sig...
-GLfloat	zrot=0,xrot=0,yrot=0;
+/* Kamera */
 GLfloat transx=0.0f, transy=0.0f;
 GLfloat Distance=-30.0f, SpeedVar, tmpSpeedVar;
 
@@ -1216,9 +1197,6 @@ int CalcGameVars()
 								//	gubbar[loop3].angle=-gubbar[loop3].angle;
 								gubbar[loop3].curspeed=-gubbar[loop3].curspeed;
 								gubbar[loop3].angle+=60;
-
-
-								sant=TRUE;
 							}
 
 
