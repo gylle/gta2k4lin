@@ -19,7 +19,7 @@ endif
 ifeq ($(shell sh -c 'pkg-config --libs SDL_ttf 2>/dev/null'),)
 	LIBS_EXTRA+=-lSDL_ttf
 else
-	LIBRARIES+= SSDL_ttf
+	LIBRARIES+= SDL_ttf
 endif
 
 
