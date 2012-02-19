@@ -484,8 +484,6 @@ int LoadCars()   // och gubbar.
 
 
 	// Kicka igång alla gubbar
-	bool bra;
-
 	int einar=0;
 
 	int loop1 = 0;
@@ -506,21 +504,17 @@ int LoadCars()   // och gubbar.
 		gubbar[loop1].z=1.9f;
 
 
-		bra=FALSE;
 		// Voila, en slumpgenerator... då var det bara collisiondetection grejjen kvar...
 		// den förbannade doningen FUNGERAR INTE!
-		while(!bra) {
-			srand(TimerGetTime()+einar);
-			einar = einar +1;
-			//std::cout << einar << std::endl;
-			//std::cout << "J:" << (float)(rand() % world.nrcubex)*100.0f << ":J-" << std::endl;
-			gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
-			gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
-			gubbar[loop1].angle=rand() % 360;
-			//std::cout << "D: X:" << gubbar[loop1].posx << "Y:" << gubbar[loop1].posy << "-" << std::endl;
+		srand(TimerGetTime()+einar);
+		einar = einar +1;
+		//std::cout << einar << std::endl;
+		//std::cout << "J:" << (float)(rand() % world.nrcubex)*100.0f << ":J-" << std::endl;
+		gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
+		gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
+		gubbar[loop1].angle=rand() % 360;
+		//std::cout << "D: X:" << gubbar[loop1].posx << "Y:" << gubbar[loop1].posy << "-" << std::endl;
 
-			bra=TRUE;
-		}
 
 
 		//gubbar[loop1].posx=10.0f;
@@ -946,7 +940,7 @@ int CalcGameVars()
 	// Nej, jag har bestämt mig. Vi stänger av gubbarna när vi kör med networch...
 	//int tmprand;
 
-	int einar=0; bool bra;
+	int einar=0;
 
 	if(!Network) {
 		for(int loop1=0;loop1<nrgubbar;loop1++) {
@@ -975,17 +969,12 @@ int CalcGameVars()
 				if(gubbar[loop1].atimer>=gubbtid) {   // Jag antar att man borde randomiza ut platsen igen...
 					gubbar[loop1].atimer=0;
 					gubbar[loop1].alive=TRUE;
-					bra=false;
 
-					while(!bra) {
-						einar++;
-						srand(TimerGetTime()+einar);
-						gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
-						gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
-						gubbar[loop1].angle=rand() % 360;
-						bra=TRUE;
-					}
-
+					einar++;
+					srand(TimerGetTime()+einar);
+					gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
+					gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
+					gubbar[loop1].angle=rand() % 360;
 				}
 			}
 
