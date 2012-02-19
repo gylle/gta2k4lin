@@ -106,7 +106,7 @@ GLuint	GubbeDispList;
 
 // Fina spel grejjer!
 const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
-const int nrgubbar=1000;
+const int nrgubbar=100;
 
 
 // ej, det här är typ.nätwärch stuff. (Vilket språk jag har!)
