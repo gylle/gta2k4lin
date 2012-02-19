@@ -110,8 +110,6 @@ int tmprand;
 bool debugBlend=FALSE;
 float blendcolor;
 
-char mapFile[17]="data/default,map";
-
 
 
 GLuint	GubbeDispList;
@@ -348,15 +346,6 @@ int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 	return 1;							// Return The Status
 }
 
-void TimerInit()								// Initialize Our Timer (Get It Ready)
-{
-}
-
-int TimerGetTime()								// Get Time In Milliseconds
-{
-    return SDL_GetTicks();
-}
-
 void ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
 {
 	if (height==0)										// Prevent A Divide By Zero By
@@ -506,19 +495,11 @@ int LoadCars()   // och gubbar.
 
 		// Voila, en slumpgenerator... då var det bara collisiondetection grejjen kvar...
 		// den förbannade doningen FUNGERAR INTE!
-		srand(TimerGetTime()+einar);
+		srand(SDL_GetTicks()+einar);
 		einar = einar +1;
-		//std::cout << einar << std::endl;
-		//std::cout << "J:" << (float)(rand() % world.nrcubex)*100.0f << ":J-" << std::endl;
 		gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
 		gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
 		gubbar[loop1].angle=rand() % 360;
-		//std::cout << "D: X:" << gubbar[loop1].posx << "Y:" << gubbar[loop1].posy << "-" << std::endl;
-
-
-
-		//gubbar[loop1].posx=10.0f;
-		//gubbar[loop1].posy=10.0f+loop1*(gubbar[loop1].y+2.2f);
 
 		gubbar[loop1].posz=bsize;
 
@@ -536,43 +517,11 @@ int LoadCars()   // och gubbar.
 
 	glNewList(GubbeDispList,GL_COMPILE);
 
-	/* glBegin(GL_QUADS);
-
-	// Huvudet...
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].posz);// X-----------
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].posz);// X-----------
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].posz);
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].posz);
-
-	// bak och fram
-
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// -----------X
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].posz);// -----------X
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].posz);// X-----------
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// -----------X
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].posz);// -----------X
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].posz);// X-----------
-
-
-
-
-*/
 	// För att det finns massa som refererar till detta:
 	loop1=1;
 	glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[loop1].ltexture2]);
 
 	glBegin(GL_QUADS);
-
 
 	// Ovanifrån...
 
@@ -669,15 +618,10 @@ int InitGL()								//		 All Setup For OpenGL Goes Here
 	 */
 	glMatrixMode( GL_PROJECTION );
 	glLoadIdentity( );
-	/*
-	 * EXERCISE:
-	 * Replace this with a call to glFrustum.
-	 */
 	gluPerspective( 60.0, ratio, 1.0, 1024.0 );
 
 	glMatrixMode( GL_MODELVIEW );
 	glShadeModel(GL_SMOOTH);							// Enable Smooth Shading
-	//glClearColor(0.0f, 0.0f, 0.0f, 0.2f);
 	glClearDepth(1.0f);									// Depth Buffer Setup
 	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
@@ -859,12 +803,6 @@ int RespondToKeys()
 int CalcGameVars()
 {
 
-
-	/*BASS_SampleStop(motorn);
-	  if(!BASS_ChannelSetAttributes(motorn,22050,-1,-101))
-	  MessageBox(NULL,"SKIT","SKIT",MB_OK);
-	  BASS_SamplePlay(motorn); */
-
 	// Tar hand om hastigheten...
 	if(bil.curspeed>bil.maxspeed)
 		bil.curspeed=bil.maxspeed;
@@ -922,8 +860,6 @@ int CalcGameVars()
 		tmpy=-(bil.curspeed-tmpx);
 	}
 
-	//std::cout << "Nuvarande Hastighet:" << bil.curspeed << std::endl;
-
 	///////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////
 	///			Styr även nätverksbilarna...						 //
@@ -947,7 +883,7 @@ int CalcGameVars()
 
 			// den här funktionen som bestämmer vad gubbarna ska göra måste skrivas om,
 			// Gubbarna är totalt urblåsta.
-			srand((int)TimerGetTime()+loop1);		// det är jobbigt om gubbarna flyttar på sig så fort man svänger bilen...
+			srand(SDL_GetTicks()+loop1);		// det är jobbigt om gubbarna flyttar på sig så fort man svänger bilen...
 
 			if(gubbar[loop1].alive) {
 				tmprand=rand() % 100; // Ejjj, det wooorkar...
@@ -971,7 +907,7 @@ int CalcGameVars()
 					gubbar[loop1].alive=TRUE;
 
 					einar++;
-					srand(TimerGetTime()+einar);
+					srand(SDL_GetTicks()+einar);
 					gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
 					gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
 					gubbar[loop1].angle=rand() % 360;
@@ -1713,7 +1649,6 @@ int main(int argc, char *argv[])
 	// HUVUDLOOPEN!!! Detta är själva spelet!
 	// TODO: Implementera frameskip...
 	Uint32 TimerTicks;
-	Uint32 tmpTicks;
 
         init_hud();
 	init_sound();
@@ -1722,32 +1657,20 @@ int main(int argc, char *argv[])
 	{
 
 		TimerTicks=SDL_GetTicks();
-		tmpTicks=SDL_GetTicks();
 		if(CheckaEvents()==1) {
 			exit(0);
 		}
-		//std::cout << "KollaEvents:" << SDL_GetTicks-tmpTicks << std::endl;
-
-		tmpTicks=SDL_GetTicks();
 
                 if(!hud_input_field_active()) {
                     if(!RespondToKeys())
                         done = 1;
                 }
-		//std::cout << "Respond:" << SDL_GetTicks-tmpTicks << std::endl;
 
-		tmpTicks=SDL_GetTicks();
 		CalcGameVars();
-		//std::cout << "Calc:" << SDL_GetTicks-tmpTicks << std::endl;
 
-		tmpTicks=SDL_GetTicks();
 		DrawGLScene();
                 hud_render();
-		//std::cout << "Draw:" << SDL_GetTicks-tmpTicks << std::endl;
-
-		tmpTicks=SDL_GetTicks();
 		SDL_GL_SwapBuffers();
-		//std::cout << "Swap:" << SDL_GetTicks-tmpTicks << std::endl;
 
 		while(TimerTicks+30>SDL_GetTicks()) { usleep(1); }
 	}
