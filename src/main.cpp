@@ -163,7 +163,7 @@ struct cube {
 	// Vilken textur som ska mappas till kuben...
 	int texturenr;
 	// Ett namn på stället man är.
-	char* beskrivning;
+	const char* beskrivning;
 };
 
 struct car {
@@ -239,7 +239,7 @@ struct world {
 	int nrcubex;
 	int nrcubey;
 	struct cube *map;
-	char **texture_filenames;
+	const char **texture_filenames;
 	GLuint *texIDs;
 	int ntextures;
 };
@@ -302,7 +302,7 @@ int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 		char *pixels = (char *) texture->pixels;
 		int w = texture->w * 3;
 		unsigned int size = texture->w * texture->h * 3;
-		for (int j = 0; j < size / 2; j += 3) {
+		for (unsigned int j = 0; j < size / 2; j += 3) {
 			memcpy(tp, &pixels[j], 3);
 			memcpy(&pixels[j], &pixels[size - j], 3);
 			memcpy(&pixels[size - j], tp, 3);
@@ -337,9 +337,9 @@ void TimerInit()								// Initialize Our Timer (Get It Ready)
 {
 }
 
-float TimerGetTime()								// Get Time In Milliseconds
+int TimerGetTime()								// Get Time In Milliseconds
 {
-	//return( (float) ( timeGetTime() - timer.mm_timer_start) * timer.resolution)*1000.0f;
+    return SDL_GetTicks();
 }
 
 void ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
@@ -507,7 +507,7 @@ int LoadCars()   // och gubbar.
 
 	mbil.Points=0;
 
-	if(Network)
+	if(Network) {
 		if(Server) {
 			bil.posx=10;
 			bil.posy=10;
@@ -519,6 +519,7 @@ int LoadCars()   // och gubbar.
 			bil.posx=50;
 			bil.posy=50;
 		}
+        }
 
 
 
@@ -527,7 +528,6 @@ int LoadCars()   // och gubbar.
 	bool bra;
 
 	int einar=0;
-	float tmpcntdon;
 
 	int loop1 = 0;
 
@@ -1165,7 +1165,6 @@ int CalcGameVars()
 			tmpbily=bil.y;
 		}
 
-		int tmpsndch;
 		for(loop1=0; loop1<nrgubbar; loop1++) {
 			if(gubbar[loop1].alive)
 				if(bil.posx+tmpx+tmpbilx/2>=gubbar[loop1].posx+gubbar[loop1].tmpx-(gubbar[loop1].x/2) && bil.posx+tmpx-tmpbilx/2<=gubbar[loop1].posx+gubbar[loop1].tmpx+(gubbar[loop1].x/2))
@@ -1513,7 +1512,7 @@ void handle_input_field(SDL_keysym key, int type) {
     }
 
     if(input_field == NULL) {
-        input_field = malloc(input_max+1);
+        input_field = (char*)malloc(input_max+1);
         input_field[0] = '\0';
         input_length = 0;
     }
@@ -1531,9 +1530,9 @@ void handle_input_field(SDL_keysym key, int type) {
         input_field = NULL;
         hud_update_input_field("");
     } else if(input_length < input_max) {
-        if(key.sym >= 'a' && key.sym <= 'z' ||
-           key.sym >= '0' && key.sym <= '9' ||
-           key.sym == ' ') {
+        if((key.sym >= 'a' && key.sym <= 'z') ||
+           (key.sym >= '0' && key.sym <= '9') ||
+            key.sym == ' ') {
             input_field[input_length++] = key.sym;
             input_field[input_length] = '\0';
             hud_update_input_field(input_field);
@@ -1572,7 +1571,7 @@ int CheckaEvents()
 
 }
 
-int print_help()
+void print_help()
 {
 	fprintf(stderr, "Usage: gta2k [OPTIONS]\n\n");
 	fprintf(stderr, "Options:\n");
@@ -1698,7 +1697,7 @@ int main(int argc, char *argv[])
 	world.nrcubex = 20;
 	world.nrcubey = 20;
 	// De texturer som på nåt sätt ska laddas är:
-	char *texture_filenames[] = {
+	const char *texture_filenames[] = {
 		"test.tga",
 		"carroof.tga",
 		"road1.tga",
