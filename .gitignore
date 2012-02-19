@@ -6,7 +6,7 @@ gta2k4lin
 *.lo
 core
 *.core
-
+Makefile.depend
 .*.swp
 .*.swo
 *~
