@@ -1120,26 +1120,20 @@ int CalcGameVars()
 						tmpx=0.0f; tmpy=0.0f;
 						// EJJ, SÅ HÄR SKA DET JU VARA!!!!!
 						bil.curspeed=-bil.curspeed;
-						play_sound(krasch);
 						player.krockar++;
 						//std::cout << "KROCK!";
 
+                                                int damage = abs((int)(bil.curspeed*5));
+                                                if(damage) {
+                                                    play_sound(krasch);
 
-						if(bil.curspeed<0)
-							bil.helhet+=(int)(bil.curspeed*4);
-						if(bil.curspeed>0)
-							bil.helhet-=(int)(bil.curspeed*5);
-
-						if(bil.helhet<=0) {
-							bil.helhet=0;
-							bil.t1=14;
-						}
-
-						//dod=TRUE;
+                                                    bil.helhet -= damage;
+                                                    if(bil.helhet <= 0) {
+                                                        bil.helhet = 0;
+                                                        bil.t1=14;
+                                                    }
+                                                }
 					}
-
-
-
 			}
 		}
 
