@@ -1354,6 +1354,10 @@ void KillGLWindow()
 
 }
 
+void peer_send_line(const char *nick, const char *input) {
+	hud_printf("%s> %s", nick, input);
+}
+
 void input_send_line(const char *input) {
 	if (Network)
 		network_amsg_send(input);
@@ -1553,6 +1557,8 @@ int parse_options(int argc, char *argv[])
 int main(int argc, char *argv[])
 {
 
+	char mbuf[1024];
+
 	parse_options(argc, argv);
 
 	// C++ SUGER SÅ MYCKET!!!1
@@ -1647,6 +1653,11 @@ int main(int argc, char *argv[])
 		DrawGLScene();
                 hud_render();
 		SDL_GL_SwapBuffers();
+
+		unsigned long id;
+		while (network_amsg_recv(mbuf, &id, 1024) > 0) {
+			peer_send_line(network_lookup_id(id), mbuf);
+		}
 
 		while(TimerTicks+30>SDL_GetTicks()) { usleep(1); }
 	}

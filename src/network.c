@@ -54,18 +54,24 @@ lmq_t amsg_ingress;
 lmq_t amsg_outgress;
 lmq_t smsg_outgress;
 
+pthread_mutex_t position_mutex = PTHREAD_MUTEX_INITIALIZER;
 float pos[3];
 int angle;
 int pos_changed;
 pthread_t thread;
-pthread_mutex_t position_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 int socktransferunit; /* damp */
 
+struct opponent {
+	unsigned long id;
+	int used;
+	char *nick;
+	float position[3];
+};
+
 #define MAX_OPPONENTS 64
-int used[MAX_OPPONENTS];
-float opos[MAX_OPPONENTS][3];
-unsigned long ids[MAX_OPPONENTS];
+struct opponent opponents[MAX_OPPONENTS];
+pthread_mutex_t opponents_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct timeval last_position_update;
 
@@ -89,8 +95,75 @@ int network_amsg_send(char *msg) {
 }
 
 #define min(x,y) (x) < (y) ? (x) : (y)
-int network_amsg_recv(char *msg, unsigned size) {
-	return lmq_recv(&amsg_outgress, msg, size, NULL);
+int network_amsg_recv(char *msg, unsigned long *id, unsigned size) {
+	/* TODO: detta är racy som fan, inte säkert både msg och id finns i
+	 * kön */
+	return lmq_recv(&amsg_outgress, msg, size, NULL) +
+		lmq_recv(&amsg_outgress, id, sizeof(unsigned long), NULL);
+}
+
+int register_id(unsigned long id, char *nick) {
+	int ret = -1;
+	int i;
+
+	pthread_mutex_lock(&opponents_mutex);
+	for (i = 0; i < MAX_OPPONENTS; i++) {
+		if (!opponents[i].used)
+			break;
+	}
+
+	if (i >= MAX_OPPONENTS)
+		return -1;
+
+	opponents[i].id = id;
+	opponents[i].nick = malloc(strlen(nick) + 1);
+	if (opponents[i].nick == NULL)
+		goto out;
+	strcpy(opponents[i].nick, nick);
+
+	ret = 0;
+out:
+	pthread_mutex_unlock(&opponents_mutex);
+
+	return ret;
+}
+
+int remove_id(unsigned long id) {
+	int ret = -1;
+	int i;
+
+	pthread_mutex_lock(&opponents_mutex);
+	for (i = 0; i < MAX_OPPONENTS; i++) {
+		if (opponents[i].id == id) {
+			opponents[i].used = 0;
+			free(opponents[i].nick);
+			opponents[i].nick = NULL;
+			ret = 1;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&opponents_mutex);
+	return ret;
+}
+
+const char *network_lookup_id(unsigned long id) {
+	char *ret = NULL;
+	int i;
+
+	pthread_mutex_lock(&opponents_mutex);
+
+	for (i = 0; i < MAX_OPPONENTS; i++) {
+		if (opponents[i].id == id) {
+			/* TODO: här finns ett race, nicket kan bli free:at
+			 * innan det används klar i andra ändan */
+			ret = opponents[i].nick;
+			break;
+		}
+	}
+
+	pthread_mutex_unlock(&opponents_mutex);
+
+	return ret;
 }
 
 ssize_t send_all(int sock, void *b, ssize_t len, int flags) {
@@ -179,6 +252,7 @@ int handle_data(char *buf, size_t size) {
 
 		printf("User with id %lu just said: '%s'\n", id, mbuf);
 		lmq_send(&amsg_outgress, mbuf, len + 1, 0);
+		lmq_send(&amsg_outgress, &id, sizeof(id), 0);
 
 		consumed = len + 8;
 		break;
@@ -213,6 +287,8 @@ int handle_data(char *buf, size_t size) {
 
 		memcpy(mbuf, &buf[7], len);
 		mbuf[len] = 0;
+
+		register_id(id, mbuf);
 		printf("User %s with id %lu just joined\n", mbuf, id);
 
 		consumed = len + 7;
@@ -224,6 +300,7 @@ int handle_data(char *buf, size_t size) {
 		memcpy(&u32, &buf[2], 4);
 		id = ntohl(u32);
 		
+		remove_id(id);
 		printf("User id %lu just left\n", id);
 
 		consumed = 6;
