@@ -569,12 +569,12 @@ int LoadCars()   // och gubbar.
 		while(!bra) {
 			srand(TimerGetTime()+einar);
 			einar = einar +1;
-			std::cout << einar << std::endl;
+			//std::cout << einar << std::endl;
 			//std::cout << "J:" << (float)(rand() % world.nrcubex)*100.0f << ":J-" << std::endl;
 			gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
 			gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
 			gubbar[loop1].angle=rand() % 360;
-			std::cout << "D: X:" << gubbar[loop1].posx << "Y:" << gubbar[loop1].posy << "-" << std::endl;
+			//std::cout << "D: X:" << gubbar[loop1].posx << "Y:" << gubbar[loop1].posy << "-" << std::endl;
 
 			bra=TRUE;
 		}
