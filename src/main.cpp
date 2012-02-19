@@ -65,6 +65,7 @@
 extern "C" {
 #include "sound.h"
 #include "network.h"
+#include "hud.h"
 }
 
 int width = 640;
@@ -273,30 +274,6 @@ float CalcMapPlace(int cx,int cy,bool xy)
 	return Answer;
 }
 
-char* ensiffrachar(int ensiffraint)
-{
-	// Ejj, kommer direkt från mitt chartest program :)
-	// (Undrar om den verkligen fungerar, eller om den läcker minne 2000)
-
-	char* temp= new char[20];
-
-	//itoa(ensiffraint,temp,10);
-
-	temp = "Fungerarej";
-
-	return temp;
-}
-
-
-
-
-
-
-
-void glPrint(const char *fmt, ...)					// Custom GL "Print" Routine
-{
-
-}
 
 int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 {
@@ -898,6 +875,15 @@ int RespondToKeys()
 	} else {
 		debugBlend=FALSE;
 	}
+        if(keys[SDLK_t]) {
+            hud_show_input_field(1);
+        }
+
+        if(keys[SDLK_ESCAPE])
+        {
+            std::cout << "Escape tryckt, avslutar..." << std::endl;
+            return false;
+        }
 
 	// Nu vet vi precis vilka knappar som var pressade...
 	// Då skickar vi strängen PressedB, och tar emot mPressedB
@@ -1496,41 +1482,13 @@ int DrawGLScene()
 
 	} // !Network
 
-	glDisable(GL_TEXTURE_2D);
-
-	glLoadIdentity();
-	glTranslatef(5.0f,-7.0f,-18.0f);
-	glColor3f(1.0f,0.0f,0.0f);
-	glPrint("Helhet(%):  ");
-	glPrint(ensiffrachar(bil.helhet));
-
+        hud_set_damage(bil.helhet);
 
 	if(!Network) {
-		glLoadIdentity();
-		glTranslatef(-5.0,-7.0f,-18.0f);
-		glColor3f(0.0f,0.0f,1.0f);
-		glPrint("Overruns:    ");
-		glPrint(ensiffrachar(player.runovers));
-
-
+            hud_set_score(player.runovers);
 	} else {
-		glLoadIdentity();
-		glTranslatef(-5.0,-5.0f,-18.0f);
-		glColor3f(0.0f,0.0f,1.0f);
-		glPrint("Dina poäng:  ");
-		glPrint(ensiffrachar(bil.Points));
-		glTranslatef(0.0f,-2.0f,0.0f);
-		glPrint("Annans poäng:  ");
-		glPrint(ensiffrachar(mbil.Points));
-
-		glLoadIdentity();
-		glTranslatef(5.0f,-5.0f,-18.0f);
-		glColor3f(1.0f,0.0f,0.0f);
-		glPrint("Enemy pos:  ");
-		glPrint(Riktning);
-
+            /* TODO */
 	}
-
 
 	return true;
 
@@ -1544,6 +1502,51 @@ void KillGLWindow()
 
 }
 
+void input_send_line(const char *input) {
+    hud_printf("Me> %s", input);
+}
+
+void handle_input_field(SDL_keysym key, int type) {
+    if(!hud_input_field_active())
+        return;
+
+    static const int input_max = 80;
+    static char *input_field = NULL;
+    static int input_length = 0;
+
+    if(type == SDL_KEYDOWN) {
+        return;
+    }
+
+    if(input_field == NULL) {
+        input_field = malloc(input_max+1);
+        input_field[0] = '\0';
+        input_length = 0;
+    }
+
+    if(key.sym == SDLK_ESCAPE) {
+        free(input_field);
+        input_field = NULL;
+        hud_show_input_field(0);
+    } else if(key.sym == SDLK_BACKSPACE && input_length > 0) {
+        input_field[--input_length] = '\0';
+        hud_update_input_field(input_field);
+    } else if(key.sym == SDLK_RETURN && input_length > 0) {
+        input_send_line(input_field);
+        free(input_field);
+        input_field = NULL;
+        hud_update_input_field("");
+    } else if(input_length < input_max) {
+        if(key.sym >= 'a' && key.sym <= 'z' ||
+           key.sym >= '0' && key.sym <= '9' ||
+           key.sym == ' ') {
+            input_field[input_length++] = key.sym;
+            input_field[input_length] = '\0';
+            hud_update_input_field(input_field);
+        }
+    }
+}
+
 int CheckaEvents()
 {
 	SDL_Event event;
@@ -1551,10 +1554,12 @@ int CheckaEvents()
 	while( SDL_PollEvent( &event ) ){
 		switch( event.type ){
 		case SDL_KEYDOWN:
+			handle_input_field(event.key.keysym, SDL_KEYDOWN);
 			keys[event.key.keysym.sym]=true;
 			break;
 
 		case SDL_KEYUP:
+			handle_input_field(event.key.keysym, SDL_KEYUP);
 			keys[event.key.keysym.sym]=false;
 			break;
 
@@ -1769,6 +1774,7 @@ int main(int argc, char *argv[])
 	Uint32 TimerTicks;
 	Uint32 tmpTicks;
 
+        init_hud();
 	init_sound();
 
 	while(!done)
@@ -1782,7 +1788,11 @@ int main(int argc, char *argv[])
 		//std::cout << "KollaEvents:" << SDL_GetTicks-tmpTicks << std::endl;
 
 		tmpTicks=SDL_GetTicks();
-		RespondToKeys();
+
+                if(!hud_input_field_active()) {
+                    if(!RespondToKeys())
+                        done = 1;
+                }
 		//std::cout << "Respond:" << SDL_GetTicks-tmpTicks << std::endl;
 
 		tmpTicks=SDL_GetTicks();
@@ -1791,6 +1801,7 @@ int main(int argc, char *argv[])
 
 		tmpTicks=SDL_GetTicks();
 		DrawGLScene();
+                hud_render();
 		//std::cout << "Draw:" << SDL_GetTicks-tmpTicks << std::endl;
 
 		tmpTicks=SDL_GetTicks();
@@ -1798,15 +1809,9 @@ int main(int argc, char *argv[])
 		//std::cout << "Swap:" << SDL_GetTicks-tmpTicks << std::endl;
 
 		while(TimerTicks+30>SDL_GetTicks()) { usleep(1); }
-
-		if(keys[SDLK_ESCAPE])
-		{
-			std::cout << "Escape tryckt, avslutar..." << std::endl;
-			SDL_Quit();
-			done = 1;
-		}
-
 	}
+
+        SDL_Quit();
 
 	return 0; 	// SLYYT.
 }

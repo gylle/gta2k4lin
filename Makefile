@@ -1,6 +1,6 @@
 TARGETS=gta2k4lin
 
-C_SOURCES=src/sound.c src/network.c
+C_SOURCES=src/sound.c src/network.c src/hud.c
 CXX_SOURCES=src/main.cpp
 
 CC=gcc
@@ -8,7 +8,7 @@ CXX=g++
 
 OBJS=$(subst,$(CXX_SOURCES),.cpp,.o) $(subst,$(C_SOURCES),.c,.o)
 
-LIBRARIES=sdl glu x11 SDL_image
+LIBRARIES=sdl glu x11 SDL_image SDL_ttf
 
 ifeq ($(shell sh -c 'pkg-config --libs SDL_mixer 2>/dev/null'),)
 	LIBS_EXTRA=-lSDL_mixer
@@ -35,7 +35,7 @@ dist:
 depend:
 	make -B Makefile.depend
 
-gta2k4lin: src/main.o src/sound.o src/network.o
+gta2k4lin: src/main.o src/sound.o src/network.o src/hud.o
 	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
 
 Makefile.depend: $(CXX_SOURCES) $(C_SOURCES)
