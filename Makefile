@@ -8,13 +8,20 @@ CXX=g++
 
 OBJS=$(subst,$(CXX_SOURCES),.cpp,.o) $(subst,$(C_SOURCES),.c,.o)
 
-LIBRARIES=sdl glu x11 SDL_image SDL_ttf
+LIBRARIES=sdl glu x11 SDL_image
 
 ifeq ($(shell sh -c 'pkg-config --libs SDL_mixer 2>/dev/null'),)
-	LIBS_EXTRA=-lSDL_mixer
+	LIBS_EXTRA+=-lSDL_mixer
 else
 	LIBRARIES+= SDL_mixer
 endif
+
+ifeq ($(shell sh -c 'pkg-config --libs SDL_ttf 2>/dev/null'),)
+	LIBS_EXTRA+=-lSDL_ttf
+else
+	LIBRARIES+= SSDL_ttf
+endif
+
 
 LIBS=$(shell pkg-config --libs $(LIBRARIES)) $(LIBS_EXTRA)
 
