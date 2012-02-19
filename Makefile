@@ -1,6 +1,6 @@
 TARGETS=gta2k4lin
 
-C_SOURCES=src/sound.c
+C_SOURCES=src/sound.c src/network.c
 CXX_SOURCES=src/main.cpp
 
 CC=gcc
@@ -35,10 +35,10 @@ dist:
 depend:
 	make -B Makefile.depend
 
-gta2k4lin: src/main.o src/sound.o
+gta2k4lin: src/main.o src/sound.o src/network.o
 	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
 
-Makefile.depend: $(CXX_SOURCES)
+Makefile.depend: $(CXX_SOURCES) $(C_SOURCES)
 	$(CC) -MM $(CFLAGS) $^ > Makefile.depend
 	$(CXX) -MM $(CXXFLAGS) $^ >> Makefile.depend
 

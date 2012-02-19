@@ -57,12 +57,14 @@
 #include <SDL.h>
 #include <sys/time.h>
 #include <sys/param.h>
+#include <getopt.h>
 
 #include "SDL.h"
 #include "SDL_image.h"
 
 extern "C" {
 #include "sound.h"
+#include "network.h"
 }
 
 int width = 640;
@@ -88,6 +90,11 @@ bool NoBlend=TRUE;
 // Enable:as bara ifall man ska försöka få igång nätverket...
 bool Network=FALSE;			// Nätverk eller singelplayer...
 bool Server=FALSE;			// Om Server, annars klient.
+
+char *server_addr = NULL;
+unsigned server_port = 9378;
+char *nick = NULL;
+int proto_only = 0;
 
 // I vilkenservervillduanslutatill-rutan?
 char TextEntered[256];
@@ -1566,9 +1573,127 @@ int CheckaEvents()
 
 }
 
-int main()
+int print_help()
+{
+	fprintf(stderr, "Usage: gta2k [OPTIONS]\n\n");
+	fprintf(stderr, "Options:\n");
+	fprintf(stderr, "  -s, --server=SERVER   Connect to server\n");
+	fprintf(stderr, "  -p, --port=PORT       Use port number PORT "
+			"(default: %u)\n", server_port);
+	fprintf(stderr, "  -n, --nick=NICK       Use NICK as nick name\n");
+	fprintf(stderr, "  -4, --ipv4-only       Force usage of IPv4 when "
+			"connecting to a server\n");
+	fprintf(stderr, "  -6, --ipv6-only       Force usage of IPv6 when "
+			"connecting to a server\n");
+	fprintf(stderr, "  -h, --help            Show this help\n");
+}
+
+int parse_options(int argc, char *argv[])
+{
+	char opt;
+	int option_index = 0;
+	int this_option_optind;
+	int ipv4_only = 0;
+	int ipv6_only = 0;
+	static struct option long_options[] = {
+		{"server",    required_argument, 0,  0 },
+		{"port",      required_argument, 0,  0 },
+		{"nick",      required_argument, 0,  0 },
+		{"ipv4-only", no_argument,       0,  0 },
+		{"ipv6-only", no_argument,       0,  0 },
+		{"help",      no_argument,       0,  0 },
+		{0,           0,                 0,  0 }
+	};
+	const char *short_options = "s:p:n:46h";
+
+	while (1) {
+		this_option_optind = optind ? optind : 1;
+
+		opt = getopt_long(argc, argv, short_options,
+				long_options, &option_index);
+		if (opt == -1)
+			break;
+
+		/* Doneri, donera. Skyffla vidare longopts till
+		 * shortopts-motsvarigheten. Går väl att stoppa in lite logik
+		 * här för eventuella framtida longopts-only-saker. */
+		if (opt == 0) {
+			switch (option_index) {
+			case 0:
+				opt = 's';
+				break;
+			case 1:
+				opt = 'p';
+				break;
+			case 2:
+				opt = 'n';
+				break;
+			case 3:
+				opt = '4';
+				break;
+			case 4:
+				opt = '6';
+				break;
+			case 5:
+				opt = 'h';
+				break;
+			}
+		}
+		switch (opt) {
+		case 's':
+			server_addr = optarg;
+			break;
+		case 'p':
+			if (sscanf(optarg, "%u", &server_port) != 1) {
+				fprintf(stderr, "Error: Illegal port number: '%s'\n\n",
+						optarg);
+				print_help();
+				exit(42);
+			}
+			break;
+		case 'n':
+			nick = optarg;
+			break;
+		case '4':
+			ipv4_only = 1;
+			proto_only = 4;
+			break;
+		case '6':
+			ipv6_only = 1;
+			proto_only = 6;
+			break;
+		case 'h':
+			print_help();
+			exit(42);
+			break;
+		default:
+			printf("?? getopt returned character code 0x%x ??\n", opt);
+			break;
+		}
+	}
+
+	/* Kolla så allt är sunt. Eller osunt. Eller nåt. Einar. */
+	if (server_addr != NULL && nick == NULL) {
+		fprintf(stderr, "Error: Network play requires yo to supply a "
+				"nick name as well\n\n");
+		print_help();
+		exit(42);
+	}
+
+	if (ipv4_only && ipv6_only) {
+		fprintf(stderr, "Error: You do realize that you cannot run "
+				"'only IPv4' AND 'only IPv6', right?\n\n");
+		print_help();
+		exit(42);
+	}
+
+	return optind;
+}
+
+int main(int argc, char *argv[])
 {
 
+	parse_options(argc, argv);
 
 	// C++ SUGER SÅ MYCKET!!!1
 	world.nrcubex = 20;
@@ -1614,6 +1739,18 @@ int main()
 
 	atexit(SDL_Quit);
 
+	network_init();
+
+	Network=false;
+
+	if (server_addr != NULL) {
+		if (network_connect(server_addr, server_port, nick, proto_only)) {
+			fprintf(stderr, "Connect failed, exiting :(\n");
+			return 28;
+		}
+		Network = true;
+	}
+
 	screen = SDL_SetVideoMode(width, height, bpp, SDL_OPENGL);
 	if (screen == NULL)
 	{
@@ -1621,10 +1758,7 @@ int main()
 		exit(1);
 	}
 
-	Network=false;
-
 	fullscreen=FALSE;							// Windowed Mode
-
 
 	InitGL();
 	LoadCars();
@@ -1634,7 +1768,6 @@ int main()
 	// TODO: Implementera frameskip...
 	Uint32 TimerTicks;
 	Uint32 tmpTicks;
-
 
 	init_sound();
 
