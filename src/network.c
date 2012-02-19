@@ -20,6 +20,7 @@
  *
  */
 
+#define _GNU_SOURCE
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -30,6 +31,10 @@
 #include <errno.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+
+#include "lmq.h"
 
 #define PROTO_NICK		0
 #define PROTO_REG_COMMIT	90
@@ -40,6 +45,12 @@
 #define PROTO_NEW_USER		120
 #define PROTO_DROPPED_USER	121
 
+/* Since this is an interface towards the ui-part, ingress is things that we
+ * get from the local user, and outgress is what is going to be delivered to
+ * the local user. */
+lmq_t amsg_ingress;
+lmq_t amsg_outgress;
+lmq_t smsg_outgress;
 
 float pos[3];
 int angle;
@@ -47,14 +58,12 @@ int pos_changed;
 pthread_t thread;
 pthread_mutex_t position_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+int socktransferunit; /* damp */
+
 #define MAX_OPPONENTS 64
 int used[MAX_OPPONENTS];
 float opos[MAX_OPPONENTS][3];
 unsigned long ids[MAX_OPPONENTS];
-
-struct loop_args {
-	int sock;
-};
 
 struct timeval last_position_update;
 
@@ -66,6 +75,15 @@ struct proto_move {
 	float x, y, z;
 	int angle;
 } __attribute__((packed));
+
+int network_amsg_send(char *msg) {
+	return lmq_send(&amsg_ingress, msg, strlen(msg), 0);
+}
+
+#define min(x,y) (x) < (y) ? (x) : (y)
+int network_amsg_recv(char *msg, unsigned size) {
+	return lmq_recv(&amsg_outgress, msg, size, NULL);
+}
 
 ssize_t send_all(int sock, void *b, ssize_t len, int flags) {
 	unsigned char *buf = (unsigned char *)b;
@@ -103,19 +121,89 @@ ssize_t recv_exact(int sock, void *b, ssize_t len, int flags) {
 	return recvd;
 }
 
-void *loop(void *args) {
-	int sock = ((struct loop_args*)args)->sock;
+int handle_data(char *buf, size_t size) {
+	return 0;
+}
 
-	unsigned char sbuf[1024];
-	unsigned char rbuf[1024];
+/* This should be large enough to hold the biggest message size, which I
+ * believe is amsg with a 1023-byte msg, so 1027 bytes */
+#define RBUF_SIZE 2048
+void *loop(void *arg) {
+	int sock = *((int *)arg);
+	char sbuf[1024];
+	char rbuf[RBUF_SIZE];
+	char buf[1024];
+	size_t rbufpos = 0;
 	uint16_t u16;
 	int16_t s16;
 	uint32_t u32;
 	int32_t s32;
 	struct proto_move pmove;
+	struct pollfd fds[8];
+	int nfds;
+	int r;
+
+	fds[0].fd = sock;
+	fds[0].events = POLLIN;
+	fds[1].fd = lmq_getfd(&amsg_ingress);
+	fds[1].events = POLLIN;
+	nfds = 2;
 
 	for (;;) {
-		/* Assume that this is atomic enough */
+
+		r = poll(fds, nfds, 100);
+		if (r < 0) {
+			fprintf(stderr, "Poll failed: %s\n", strerror(errno));
+			return NULL;
+		}
+
+		/* amsg to send */
+		if (fds[1].revents & POLLIN) {
+			r = lmq_recv(&amsg_ingress, buf, 1024, NULL);
+			if (r >= 0) {
+				u16 = htons(PROTO_AMSG);
+				memcpy(&sbuf[0], &u16, 2);
+				u16 = htons(r);
+				memcpy(&sbuf[2], &u16, 2);
+				memcpy(&sbuf[4], buf, r);
+				buf[r+1]=0;printf("Sent amsg '%s' %d\n", buf,
+						r);
+				if (send_all(sock, sbuf, r + 4, 0) < 0) {
+					fprintf(stderr, "Unable to send amsg: %s\n",
+							strerror(errno));
+				}
+			}
+			else {
+				fprintf(stderr, "Unable to retrieve local amsg: %s\n",
+						strerror(errno));
+			}
+		}
+
+		/* data to recv */
+		if (fds[0].revents & POLLIN) {
+			/* Write to the buffer rbuf. This is where we keep
+			 * messages while waiting for them to be completely
+			 * recieved. */
+			r = recv(sock, &rbuf[rbufpos], RBUF_SIZE - rbufpos, 0);
+			if (r < 0 && !(r == EAGAIN || r == EWOULDBLOCK ||
+						r == EINTR)) {
+				fprintf(stderr, "Fault during recv: %s\n",
+						strerror(r));
+				return NULL;
+			}
+			rbufpos += r;
+
+			/* Alright, let's see if we have any parseable data */
+			while ((r = handle_data(rbuf, rbufpos)) > 0);
+
+			/* Remove the things we have handled */
+			if (r != 0 && r != rbufpos) {
+				memmove(rbuf, &rbuf[r], rbufpos - r);
+			}
+			rbufpos -= r;
+		}
+
+		/* position to send */
 		if (pos_changed) {
 			u16 = htons(PROTO_MOVE);
 			memcpy(&sbuf[0], &u16, 2);
@@ -144,6 +232,7 @@ int network_connect(char *addr, unsigned port, char *nick, int proto) {
 	int ret = -1;
 	int sock;
 	int r;
+	char on = 1;
 	unsigned char nicklen;
 	uint16_t u16;
 	unsigned char sbuf[1024];
@@ -219,7 +308,7 @@ int network_connect(char *addr, unsigned port, char *nick, int proto) {
 	sbuf[2] = nicklen;
 	memcpy(&sbuf[3], nick, nicklen);
 	if (send_all(sock, sbuf, nicklen + 3, 0) < 0) {
-		fprintf(stderr, "failed when sending nick! %s\n",
+		fprintf(stderr, "failed when sending nick: %s\n",
 				strerror(errno));
 		goto end;
 	}
@@ -227,21 +316,26 @@ int network_connect(char *addr, unsigned port, char *nick, int proto) {
 	/* Commit */
 	u16 = htons(PROTO_REG_COMMIT);
 	if (send_all(sock, &u16, 2, 0) < 0) {
-		fprintf(stderr, "failed when committing registration! %s\n",
+		fprintf(stderr, "failed when committing registration: %s\n",
 				strerror(errno));
 		goto end;
 	}
 
 	/* Wait for ack */
 	if (recv_exact(sock, &u16, 2, 0) < 0 || ntohs(u16) != PROTO_REG_ACK) {
-		fprintf(stderr, "failed registration (no ack)! %s\n",
+		fprintf(stderr, "failed registration (no ack): %s\n",
 				strerror(errno));
 		goto end;
 	}
 
 	fprintf(stderr, "done!\n");
 
-	pthread_create(&thread, NULL, loop, (void *)&sock);
+	if (ioctl(sock, FIONBIO, &on) < 0) {
+		fprintf(stderr, "ioctl failed: %s\n", strerror(errno));
+	}
+
+	socktransferunit = sock;
+	pthread_create(&thread, NULL, loop, (void *)&socktransferunit);
 
 	ret = 0;
 
@@ -252,7 +346,17 @@ end:
 }
 
 int network_init(void) {
+	lmq_init(&amsg_ingress);
+	lmq_init(&amsg_outgress);
+	lmq_init(&smsg_outgress);
+
 	return 0;
+}
+
+void network_deinit(void) {
+	lmq_free(&amsg_ingress);
+	lmq_free(&amsg_outgress);
+	lmq_free(&smsg_outgress);
 }
 
 int network_put_position(float x, float y, float z, int a) {

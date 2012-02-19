@@ -1474,7 +1474,9 @@ void KillGLWindow()
 }
 
 void input_send_line(const char *input) {
-    hud_printf("Me> %s", input);
+	if (Network)
+		network_amsg_send(input);
+	hud_printf("Me> %s", input);
 }
 
 void handle_input_field(SDL_keysym key, int type) {
