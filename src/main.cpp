@@ -1509,6 +1509,7 @@ void handle_input_field(SDL_keysym key, int type) {
         free(input_field);
         input_field = NULL;
         hud_update_input_field("");
+        hud_show_input_field(0);
     } else if(input_length < input_max) {
         if((key.sym >= 'a' && key.sym <= 'z') ||
            (key.sym >= '0' && key.sym <= '9') ||
