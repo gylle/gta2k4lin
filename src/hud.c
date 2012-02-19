@@ -298,7 +298,6 @@ void hud_set_damage(int new_damage) {
 void hud_set_score(int new_score) {
     if(hud_data->score_surface) {
         SDL_FreeSurface(hud_data->score_surface);
-        hud_data->score_surface = NULL;
     }
 
     hud_data->score_surface = printf_surface("Score: %4d", new_score);
@@ -315,7 +314,6 @@ int hud_input_field_active() {
 void hud_update_input_field(const char *text) {
     if(hud_data->input_surface) {
         SDL_FreeSurface(hud_data->input_surface);
-        hud_data->input_surface = NULL;
     }
 
     hud_data->input_surface = printf_surface("] %s", text);
