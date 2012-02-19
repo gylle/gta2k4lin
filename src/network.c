@@ -205,7 +205,6 @@ ssize_t recv_exact(int sock, void *b, ssize_t len, int flags) {
 int handle_data(char *buf, size_t size) {
 	uint16_t u16;
 	uint32_t u32;
-	uint8_t u8;
 	uint16_t event;
 	size_t consumed = 0;
 	struct proto_move_recv pmove;
@@ -279,8 +278,7 @@ int handle_data(char *buf, size_t size) {
 
 		memcpy(&u32, &buf[2], 4);
 		id = ntohl(u32);
-		memcpy(&u8, &buf[6], 2);
-		len = u8;
+		len = buf[6];
 
 		if (size < (7 + len))
 			return 0;
