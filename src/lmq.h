@@ -37,8 +37,8 @@ typedef struct lmq_queue lmq_t;
 
 int lmq_init(lmq_t *q);
 int lmq_free(lmq_t *q);
-int lmq_send(lmq_t *q, char *msg, size_t len, int prio);
-int lmq_recv(lmq_t *q, char *msg, size_t len, int *prio);
+int lmq_send(lmq_t *q, void *msg, size_t len, int prio);
+int lmq_recv(lmq_t *q, void *msg, size_t len, int *prio);
 int lmq_getfd(lmq_t *q);
 
 #endif

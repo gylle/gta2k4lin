@@ -71,7 +71,7 @@ int lmq_free(struct lmq_queue *q) {
 	return 0;
 }
 
-int lmq_send(struct lmq_queue *q, char *msg, size_t len, int prio) {
+int lmq_send(struct lmq_queue *q, void *msg, size_t len, int prio) {
 	struct lmq_msg *qm;
 	int r;
 
@@ -116,7 +116,7 @@ int lmq_send(struct lmq_queue *q, char *msg, size_t len, int prio) {
 	return len;
 }
 
-int lmq_recv(struct lmq_queue *q, char *msg, size_t len, int *prio) {
+int lmq_recv(struct lmq_queue *q, void *msg, size_t len, int *prio) {
 	char b;
 	int i, r;
 	int ret;
