@@ -109,23 +109,6 @@ const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :
 const int nrgubbar=100;
 
 
-// ej, det här är typ.nätwärch stuff. (Vilket språk jag har!)
-/*
-   WSADATA wsaData;
-   SOCKET AnnanData;
-   SOCKET listeningSocket;
-
-   LPHOSTENT ServerInfo;
-
-   SOCKADDR_IN saServer;
-   int nRet;
-   */
-
-// En array bestående av 1:or och 0:or... alla knappar...
-char PressedB[8];
-// En till, fast för knapparna _mottagna_ från andra datorn...
-char mPressedB[8];
-
 struct cube {
 	// Vilket plan den är på. 0.0f är det man går/åker på,
 	float z;
@@ -624,26 +607,8 @@ int InitGL()								//		 All Setup For OpenGL Goes Here
 int RespondToKeys()
 {
 
-
-	/* PressedB[	Vad de olika värdena i den här strängen betyder...
-	   0 = UP
-	   1 = NER
-	   2 = SPACE
-	   3 = TAB
-	   4 = VÄNSTER
-	   5 = HÖGER
-	   6 = RESPAWNA
-	   */
-
-
-
-	for(int PBtmp=0;PBtmp<8;PBtmp++)  // n0lla variabeln varje gång...
-		PressedB[PBtmp]='0';
-
-
 	if(bil.helhet==0) {
 		if(keys[SDLK_RETURN]) {
-			PressedB[6]='1';
 			bil.helhet=100;
 			bil.t1=1;
 			mbil.Points++;
@@ -661,19 +626,16 @@ int RespondToKeys()
 	if(!(bil.helhet==0)) {
 		if(keys[SDLK_UP]) {
 			bil.curspeed=bil.curspeed+bil.accspeed;
-			PressedB[0]='1';
 		}
 
 		if(keys[SDLK_DOWN]) {
 			bil.curspeed=bil.curspeed-bil.accspeed;
-			PressedB[1]='1';
 		}
 	}
 
 	bool brakepressed=false;
 
 	if(keys[SDLK_SPACE]) {
-		PressedB[2]='1';
 		brakepressed=true;
 		if(bil.curspeed<0.0f && bil.curspeed>-bil.bromsspeed)
 			bil.curspeed=0.0f;
@@ -696,7 +658,6 @@ int RespondToKeys()
 	}
 
 	if(keys[SDLK_TAB]) {
-		PressedB[3]='1';
 		cont_sound_play(tut);
 	}
 	else {
@@ -714,8 +675,6 @@ int RespondToKeys()
 
 		if(bil.curspeed!=0.0f)
 			bil.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
-
-		PressedB[4]='1';
 	}
 
 	if(keys[SDLK_RIGHT]) {
@@ -726,8 +685,6 @@ int RespondToKeys()
 
 		if(bil.curspeed!=0.0f)
 			bil.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
-
-		PressedB[5]='1';
 	}
 
 	// Detta är debug grejjer/saker som inte ska vara kvar i "riktiga" versionen...
