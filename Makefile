@@ -1,7 +1,6 @@
 TARGETS=gta2k4lin
 
-C_SOURCES=src/sound.c src/network.c src/hud.c src/lmq.c
-CXX_SOURCES=src/main.cpp
+C_SOURCES=src/main.c src/sound.c src/network.c src/hud.c src/lmq.c
 
 CC=gcc
 CXX=g++

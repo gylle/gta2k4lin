@@ -52,8 +52,6 @@
 #include <math.h>
 #include <GL/gl.h>			// Header File For The OpenGL32 Library
 #include <GL/glu.h>			// Header File For The GLu32 Library
-#include <fstream>
-#include <iostream>
 #include <SDL.h>
 #include <sys/time.h>
 #include <sys/param.h>
@@ -62,16 +60,20 @@
 #include "SDL.h"
 #include "SDL_image.h"
 
-extern "C" {
 #include "sound.h"
 #include "network.h"
 #include "hud.h"
-}
 
 int width = 640;
 int height = 480;
 int bpp = 32; // Vi gillar 32 här dåva
 float bsize=5.0f;
+
+#define bool  int
+#define false 0
+#define true  1
+
+#define nrgubbar 100
 
 bool keys[350];			// Array Used For The Keyboard Routine
 
@@ -106,8 +108,6 @@ GLuint	GubbeDispList;
 
 // Fina spel grejjer!
 const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
-const int nrgubbar=100;
-
 
 struct cube {
 	// Vilket plan den är på. 0.0f är det man går/åker på,
@@ -212,9 +212,9 @@ int fps;
 
 FPSCOUNTER fps; */
 
-gubbe gubbar[nrgubbar];
+struct gubbe *gubbar; //[nrgubbar];
 
-spelare player;
+struct spelare player;
 
 
 
@@ -234,8 +234,8 @@ struct world {
 struct world world;
 
 
-car bil;
-car mbil;		 // andra bilen i multiplayer
+struct car bil;
+struct car mbil;		 // andra bilen i multiplayer
 
 
 /* Kamera */
@@ -270,7 +270,8 @@ int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 
 	char path_buf[PATH_MAX];
 
-	for (int i = 0; i < world.ntextures; i++) {
+	int i;
+	for (i = 0; i < world.ntextures; i++) {
 		snprintf(path_buf, PATH_MAX, "%s%s", TEXTURE_PATH,
 				world.texture_filenames[i]);
 		SDL_Surface *texture = IMG_Load(path_buf);
@@ -285,15 +286,15 @@ int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 		char tp[3];
 		char *pixels = (char *) texture->pixels;
 		int w = texture->w * 3;
-		unsigned int size = texture->w * texture->h * 3;
-		for (unsigned int j = 0; j < size / 2; j += 3) {
+		unsigned int j, k, size = texture->w * texture->h * 3;
+		for (j = 0; j < size / 2; j += 3) {
 			memcpy(tp, &pixels[j], 3);
 			memcpy(&pixels[j], &pixels[size - j], 3);
 			memcpy(&pixels[size - j], tp, 3);
 		}
 		// Vafan, spegelvänt också?!
-		for (int j = 0; j < texture->h * w; j += w) {
-			for (int k = 0; k < w / 2; k += 3) {
+		for (j = 0; j < texture->h * w; j += w) {
+			for (k = 0; k < w / 2; k += 3) {
 				memcpy(tp, &pixels[j + k], 3);
 				memcpy(&pixels[j + k], &pixels[j + w - k - 3], 3);
 				memcpy(&pixels[j + w - k - 3], tp, 3);
@@ -346,7 +347,7 @@ int LoadLevel()
 	// LADDA IN!!!!
 	
 	// Allocate them cubes!
-	world.map = (cube *)calloc(world.nrcubex * world.nrcubey, sizeof(struct cube));
+	world.map = (struct cube *)calloc(world.nrcubex * world.nrcubey, sizeof(struct cube));
 	if (world.map == NULL)  {
 		return false;
 	}
@@ -447,6 +448,8 @@ int LoadCars()   // och gubbar.
 	int einar=0;
 
 	int loop1 = 0;
+
+	gubbar = malloc(sizeof(struct gubbe)*nrgubbar);
 
 	for(loop1=0;loop1<nrgubbar;loop1++) {
 
@@ -554,7 +557,7 @@ int InitGL()								//		 All Setup For OpenGL Goes Here
 
 	if (!LoadGLTextures())							// Jump To Texture Loading Routine ( NEW )
 	{
-		std::cout << "Bananeinar, det verkar inte som om den vill ladda texturerna.";
+		printf("Bananeinar, det verkar inte som om den vill ladda texturerna.");
 		exit(1);
 	}
 
@@ -723,7 +726,7 @@ int RespondToKeys()
 
         if(keys[SDLK_ESCAPE])
         {
-            std::cout << "Escape tryckt, avslutar..." << std::endl;
+            printf("Escape tryckt, avslutar...\n");
             return false;
         }
 
@@ -823,7 +826,8 @@ int CalcGameVars()
 	int einar=0;
 
 	if(!Network) {
-		for(int loop1=0;loop1<nrgubbar;loop1++) {
+		int loop1;
+		for(loop1=0;loop1<nrgubbar;loop1++) {
 
 			// den här funktionen som bestämmer vad gubbarna ska göra måste skrivas om,
 			// Gubbarna är totalt urblåsta.
@@ -1030,10 +1034,10 @@ int CalcGameVars()
 		// Fungerar, men vad som händer med gubbarna behöver absolut finjusteras...
 
 		// Oj, oj, oj... precis när jag trodde att jag nått CPU toppen för en liten funktion...
-
-		for(int loop3=0 ;loop3<nrgubbar; loop3++)
+                int loop2, loop3;
+		for(loop3=0 ;loop3<nrgubbar; loop3++)
 			for(loop1=0 ;loop1<world.nrcubex;loop1++)
-				for(int loop2=0;loop2<world.nrcubey;loop2++) {
+				for(loop2=0;loop2<world.nrcubey;loop2++) {
 					if(map_cube(world, loop1, loop2).z!=0.0f) {		// Om inte kuben är ett underlag...
 
 						if(gubbar[loop3].posx+gubbar[loop3].tmpx+gubbar[loop3].x/2>=CalcMapPlace(loop1,loop2,0)-bsize && gubbar[loop3].posx+gubbar[loop3].tmpx-gubbar[loop3].x/2<=CalcMapPlace(loop1,loop2,0)+bsize)
@@ -1317,7 +1321,7 @@ void peer_send_line(const char *nick, const char *input) {
 
 void input_send_line(const char *input) {
 	if (Network)
-		network_amsg_send(input);
+		network_amsg_send((char*)input);
 	hud_printf("Me> %s", input);
 }
 
@@ -1548,7 +1552,8 @@ int main(int argc, char *argv[])
 	// Här är den första delen av porten....
 
 	// Nollställ knapp-arrayen...
-	for(int tmpk=0;tmpk<350;tmpk++)
+	int tmpk;
+	for(tmpk=0;tmpk<350;tmpk++)
 		keys[tmpk]=false;
 
 	SDL_Surface *screen;
@@ -1556,7 +1561,7 @@ int main(int argc, char *argv[])
 	bool done=false;
 
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)<0) {
-		std::cout << std::endl << "Kunde inte initialisera SDL!";
+		printf("Kunde inte initialisera SDL!\n");
 		exit(1);
 	}
 
@@ -1577,7 +1582,7 @@ int main(int argc, char *argv[])
 	screen = SDL_SetVideoMode(width, height, bpp, SDL_OPENGL);
 	if (screen == NULL)
 	{
-		std::cout << "EInar";
+		printf("SetVideoMode failed (EInar)\n");
 		exit(1);
 	}
 
