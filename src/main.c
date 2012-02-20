@@ -49,6 +49,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <math.h>
 #include <GL/gl.h>			// Header File For The OpenGL32 Library
 #include <GL/glu.h>			// Header File For The GLu32 Library
@@ -102,13 +103,10 @@ float blendcolor;
 
 
 
-GLuint	GubbeDispList;
 
 
 
 // Fina spel grejjer!
-const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
-
 struct cube {
 	// Vilket plan den är på. 0.0f är det man går/åker på,
 	float z;
@@ -193,6 +191,8 @@ struct gubbe {
 	float tmpx,tmpy;
 
 };
+const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
+GLuint	GubbeDispList = NULL;
 
 struct spelare {
 	// Poäng
@@ -202,15 +202,6 @@ struct spelare {
 	// Överkörda människor
 	int runovers;
 };
-
-/*struct FPSCOUNTER {
-  float timer;
-//
-int fps;
-};
-
-
-FPSCOUNTER fps; */
 
 struct gubbe *gubbar; //[nrgubbar];
 
@@ -237,6 +228,202 @@ struct world world;
 struct car bil;
 struct car mbil;		 // andra bilen i multiplayer
 
+
+static void init_gubbe(struct gubbe *g) {
+    g->alive=true;
+
+    g->curspeed=0.0f;
+    g->maxspeed=0.3f;
+    g->accspeed=0.15f;
+    g->maxbspeed=0.2f;
+
+    //g->angle=0;
+
+    g->x=1.0f;
+    g->y=1.0f;
+    g->z=1.9f;
+
+    g->posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
+    g->posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
+    g->angle=rand() % 360;
+
+    g->posz=bsize;
+
+    g->ltexture=11;
+    g->ltexture2=13;
+    g->dtexture=12;
+
+    g->atimer = 0;
+}
+
+static void gubbe_move(struct gubbe *g) {
+    float tmpangle;
+
+    // den här funktionen som bestämmer vad gubbarna ska göra måste skrivas om,
+    // Gubbarna är totalt urblåsta.
+
+    if(g->alive) {
+        int tmprand=rand() % 100; // Ejjj, det wooorkar...
+
+        if(tmprand==0 && tmprand<3)  // gubben ska bara vrida sig fååå gånger..
+            g->angle+=10;
+
+        if(tmprand>=3 && tmprand<5)  // Ge även möjligheten att vända åt andra hållet...
+            g->angle-=10;
+
+        if(tmprand>=5 && tmprand<=100)
+            g->curspeed=g->curspeed+g->accspeed;
+
+
+
+    } else {
+        g->atimer++;
+
+        if(g->atimer>=gubbtid) {   // Jag antar att man borde randomiza ut platsen igen...
+            g->atimer=0;
+            g->alive=true;
+
+            g->posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
+            g->posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
+            g->angle=rand() % 360;
+        }
+    }
+
+    if(g->curspeed<0) {
+        if(g->curspeed<g->maxbspeed)
+            g->curspeed=g->maxbspeed;
+    } else {
+        if(g->curspeed>g->maxspeed)
+            g->curspeed=g->maxspeed;
+    }
+
+    if(g->angle<0)
+        g->angle=g->angle+360;
+    if(g->angle>359)
+        g->angle=g->angle-360;
+
+
+    tmpangle=(float)g->angle;
+
+    if(g->angle>=0 && g->angle<=90) {
+        g->tmpx=-((tmpangle/90.0f)*g->curspeed);
+        g->tmpy=g->curspeed+g->tmpx;
+    }
+
+    if(g->angle>=270 && g->angle<=360) {
+        tmpangle-=270.0f;
+        g->tmpy=(tmpangle/90.0f)*g->curspeed;
+        g->tmpx=g->curspeed-g->tmpy;
+    }
+
+    if(g->angle>90 && g->angle<=180) {
+        tmpangle-=90.0f;
+        g->tmpy=-((tmpangle/90.0f)*g->curspeed);
+        g->tmpx=-(g->curspeed+g->tmpy);
+    }
+
+    if(g->angle>180 && g->angle<270) {
+        tmpangle-=180.0f;
+        g->tmpx=(tmpangle/90.0f)*g->curspeed;
+        g->tmpy=-(g->curspeed-g->tmpx);
+    }
+
+    if(!g->alive) {
+        g->tmpx=0;
+        g->tmpy=0;
+    }
+}
+
+static void gubbe_render(struct gubbe *g) {
+    glPushMatrix();
+
+    // HAHA!!! Det gick till slut! :)
+    glTranslatef(g->posx,g->posy,0);//Distance+SpeedVar);
+    glRotatef((float)g->angle,0.0f,0.0f,1.0f);
+
+    if(g->alive) {
+        if(!NoBlend)
+            glEnable(GL_BLEND);
+
+        glColor4f(1.0f,1.0f,1.0f,255);
+        glCallList(GubbeDispList);
+
+        if(blendcolor==0.0f)
+            glDisable(GL_BLEND);
+    } else {
+        // Är man överkörd står man nog inte upp längre... :) Det här blir bättre...
+        glBindTexture(GL_TEXTURE_2D,world.texIDs[g->dtexture]);
+
+        glBegin(GL_QUADS);
+
+        // Ovanifrån...
+
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(g->x/2),0.0f+(g->y/2),bsize);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(g->x/2),0.0f+(g->y/2),bsize);// -----------X
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(g->x/2),0.0f-(g->y/2),bsize);// -----------X
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(g->x/2),0.0f-(g->y/2),bsize);// X-----------
+        glEnd();
+
+    }
+    glPopMatrix();
+}
+
+static void init_gubbe_displaylist() {
+    /* (Bygger på att den första gubben i gubbar är initialiserad */
+
+    // Vi bygger en Display List!!! EJJJJ!!!(som i öj) :)
+
+    GubbeDispList=glGenLists(1);
+
+    glNewList(GubbeDispList,GL_COMPILE);
+
+    glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture2]);
+
+    glBegin(GL_QUADS);
+
+    // Ovanifrån...
+
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// -----------X
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// -----------X
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
+    glEnd();
+
+    // Börja en ny glBegin för att vi ska kunna texturemappa huvudet och resten seperat...
+    glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture]);
+
+    glBegin(GL_QUADS);
+
+    //Höger och vänster
+
+
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].posz);// X-----------
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].posz);// X-----------
+
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].posz);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].posz);
+
+    // bak och fram
+
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// -----------X
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].posz);// -----------X
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].posz);// X-----------
+
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// -----------X
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].posz);// -----------X
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].posz);// X-----------
+
+
+    glEnd();
+
+    glEndList();
+}
 
 /* Kamera */
 GLfloat transx=0.0f, transy=0.0f;
@@ -442,104 +629,15 @@ int LoadCars()   // och gubbar.
         }
 
 
-
-
 	// Kicka igång alla gubbar
-	int einar=0;
-
-	int loop1 = 0;
-
 	gubbar = malloc(sizeof(struct gubbe)*nrgubbar);
 
-	for(loop1=0;loop1<nrgubbar;loop1++) {
-
-		gubbar[loop1].alive=true;
-
-		gubbar[loop1].curspeed=0.0f;
-		gubbar[loop1].maxspeed=0.3f;
-		gubbar[loop1].accspeed=0.15f;
-		gubbar[loop1].maxbspeed=0.2f;
-
-		//gubbar[loop1].angle=0;
-
-		gubbar[loop1].x=1.0f;
-		gubbar[loop1].y=1.0f;
-		gubbar[loop1].z=1.9f;
-
-
-		// Voila, en slumpgenerator... då var det bara collisiondetection grejjen kvar...
-		// den förbannade doningen FUNGERAR INTE!
-		srand(SDL_GetTicks()+einar);
-		einar = einar +1;
-		gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
-		gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
-		gubbar[loop1].angle=rand() % 360;
-
-		gubbar[loop1].posz=bsize;
-
-		gubbar[loop1].ltexture=11;
-		gubbar[loop1].ltexture2=13;
-		gubbar[loop1].dtexture=12;
-
-
+	int i;
+	for(i = 0; i < nrgubbar; i++) {
+            init_gubbe(&gubbar[i]);
 	}
 
-
-	// Vi bygger en Display List!!! EJJJJ!!!(som i öj) :)
-
-	GubbeDispList=glGenLists(1);
-
-	glNewList(GubbeDispList,GL_COMPILE);
-
-	// För att det finns massa som refererar till detta:
-	loop1=1;
-	glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[loop1].ltexture2]);
-
-	glBegin(GL_QUADS);
-
-	// Ovanifrån...
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// -----------X
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// -----------X
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glEnd();
-
-	// Börja en ny glBegin för att vi ska kunna texturemappa huvudet och resten seperat...
-	glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[loop1].ltexture]);
-
-	glBegin(GL_QUADS);
-
-	//Höger och vänster
-
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].posz);// X-----------
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].posz);// X-----------
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].posz);
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].posz);
-
-	// bak och fram
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// -----------X
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].posz);// -----------X
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),gubbar[loop1].posz);// X-----------
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].z+gubbar[loop1].posz);// -----------X
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].posz);// -----------X
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),gubbar[loop1].posz);// X-----------
-
-
-	glEnd();
-
-	glEndList();
-
+        init_gubbe_displaylist();
 
 	return true;
 }
@@ -823,89 +921,10 @@ int CalcGameVars()
 	// ----------------------------------------------------
 	// Nej, jag har bestämt mig. Vi stänger av gubbarna när vi kör med networch...
 
-	int einar=0;
-
 	if(!Network) {
-		int loop1;
-		for(loop1=0;loop1<nrgubbar;loop1++) {
-
-			// den här funktionen som bestämmer vad gubbarna ska göra måste skrivas om,
-			// Gubbarna är totalt urblåsta.
-			srand(SDL_GetTicks()+loop1);		// det är jobbigt om gubbarna flyttar på sig så fort man svänger bilen...
-
-			if(gubbar[loop1].alive) {
-				int tmprand=rand() % 100; // Ejjj, det wooorkar...
-
-				if(tmprand==0 && tmprand<3)  // gubben ska bara vrida sig fååå gånger..
-					gubbar[loop1].angle+=10;
-
-				if(tmprand>=3 && tmprand<5)  // Ge även möjligheten att vända åt andra hållet...
-					gubbar[loop1].angle-=10;
-
-				if(tmprand>=5 && tmprand<=100)
-					gubbar[loop1].curspeed=gubbar[loop1].curspeed+gubbar[loop1].accspeed;
-
-
-
-			} else {
-				gubbar[loop1].atimer++;
-
-				if(gubbar[loop1].atimer>=gubbtid) {   // Jag antar att man borde randomiza ut platsen igen...
-					gubbar[loop1].atimer=0;
-					gubbar[loop1].alive=true;
-
-					einar++;
-					srand(SDL_GetTicks()+einar);
-					gubbar[loop1].posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
-					gubbar[loop1].posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
-					gubbar[loop1].angle=rand() % 360;
-				}
-			}
-
-			if(gubbar[loop1].curspeed<0) {
-				if(gubbar[loop1].curspeed<gubbar[loop1].maxbspeed)
-					gubbar[loop1].curspeed=gubbar[loop1].maxbspeed;
-			} else {
-				if(gubbar[loop1].curspeed>gubbar[loop1].maxspeed)
-					gubbar[loop1].curspeed=gubbar[loop1].maxspeed;
-			}
-
-			if(gubbar[loop1].angle<0)
-				gubbar[loop1].angle=gubbar[loop1].angle+360;
-			if(gubbar[loop1].angle>359)
-				gubbar[loop1].angle=gubbar[loop1].angle-360;
-
-
-			tmpangle=(float)gubbar[loop1].angle;
-
-			if(gubbar[loop1].angle>=0 && gubbar[loop1].angle<=90) {
-				gubbar[loop1].tmpx=-((tmpangle/90.0f)*gubbar[loop1].curspeed);
-				gubbar[loop1].tmpy=gubbar[loop1].curspeed+gubbar[loop1].tmpx;
-			}
-
-			if(gubbar[loop1].angle>=270 && gubbar[loop1].angle<=360) {
-				tmpangle-=270.0f;
-				gubbar[loop1].tmpy=(tmpangle/90.0f)*gubbar[loop1].curspeed;
-				gubbar[loop1].tmpx=gubbar[loop1].curspeed-gubbar[loop1].tmpy;
-			}
-
-			if(gubbar[loop1].angle>90 && gubbar[loop1].angle<=180) {
-				tmpangle-=90.0f;
-				gubbar[loop1].tmpy=-((tmpangle/90.0f)*gubbar[loop1].curspeed);
-				gubbar[loop1].tmpx=-(gubbar[loop1].curspeed+gubbar[loop1].tmpy);
-			}
-
-			if(gubbar[loop1].angle>180 && gubbar[loop1].angle<270) {
-				tmpangle-=180.0f;
-				gubbar[loop1].tmpx=(tmpangle/90.0f)*gubbar[loop1].curspeed;
-				gubbar[loop1].tmpy=-(gubbar[loop1].curspeed-gubbar[loop1].tmpx);
-			}
-
-			if(!gubbar[loop1].alive) {
-				gubbar[loop1].tmpx=0;
-				gubbar[loop1].tmpy=0;
-			}
-
+		int i;
+		for(i=0;i<nrgubbar;i++) {
+			gubbe_move(&gubbar[i]);
 		}
 
 	}	//!Network
@@ -1248,49 +1267,11 @@ int DrawGLScene()
 	// Rita upp gubbbananerna...
 	// Hoho! De SNURRAR!!! :)))))
 
-	// glLoadIdentity();
-	// glTranslatef(transx,transy,Distance+SpeedVar);
-
 	if(!Network) {
-
+		glLoadIdentity();
+		glTranslatef(transx, transy, Distance + SpeedVar);
 		for(loop1=0;loop1<nrgubbar;loop1++) {
-
-			// HAHA!!! Det gick till slut! :)
-			glLoadIdentity();
-			glTranslatef(gubbar[loop1].posx+transx,gubbar[loop1].posy+transy,Distance+SpeedVar);
-			glRotatef((float)gubbar[loop1].angle,0.0f,0.0f,1.0f);
-
-			if(gubbar[loop1].alive) {
-
-
-				if(!NoBlend)
-					glEnable(GL_BLEND);
-
-
-				glColor4f(1.0f,1.0f,1.0f,255);
-				glCallList(GubbeDispList);
-
-				if(blendcolor==0.0f)
-					glDisable(GL_BLEND);
-
-
-			} else {
-
-				// Är man överkörd står man nog inte upp längre... :) Det här blir bättre...
-				glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[loop1].dtexture]);
-
-
-				glBegin(GL_QUADS);
-
-				// Ovanifrån...
-
-				glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),bsize);// X-----------
-				glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f+(gubbar[loop1].y/2),bsize);// -----------X
-				glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),bsize);// -----------X
-				glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[loop1].x/2),0.0f-(gubbar[loop1].y/2),bsize);// X-----------
-				glEnd();
-
-			}
+		    gubbe_render(&gubbar[loop1]);
 		}
 
 	} // !Network
@@ -1517,6 +1498,9 @@ int parse_options(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
+	// Voila, en slumpgenerator... då var det bara collisiondetection grejjen kvar...
+	// den förbannade doningen FUNGERAR INTE!
+	srand(time(NULL));
 
 	char mbuf[1024];
 
