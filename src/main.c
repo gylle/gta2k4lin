@@ -137,40 +137,6 @@ struct car {
 
 };
 
-void init_car(struct car *bil) {
-    // Ladda en standard bil...
-
-    bil->x=3;
-    bil->y=5;
-    bil->z=2;
-
-    bil->helhet=100;
-
-    bil->posx=10;
-    bil->posy=10;
-    bil->posz=bsize; // Ska nog inte initialiseras här..
-
-    bil->t1=1;
-    bil->t2=1;
-    bil->t3=1;
-    bil->t4=1;
-
-    bil->maxspeed=2.0f;
-    bil->curspeed=0.0f;
-    bil->accspeed=0.20f;
-    bil->maxbspeed=-1.0f;
-    bil->bromsspeed=0.3f;
-    bil->speeddown=0.10f;
-    // Orginal värdet
-    // bil->turnspeed=6;
-    // Nytt värde, den svänger trotsallt lite segt...
-    bil->turnspeed=8;
-
-    bil->angle=0;
-
-    bil->Points=0;
-
-}
 
 struct gubbe {
 	// Storleken:
@@ -423,6 +389,85 @@ static void init_gubbe_displaylist() {
     glEnd();
 
     glEndList();
+}
+
+void init_car(struct car *bil) {
+    // Ladda en standard bil...
+
+    bil->x=3;
+    bil->y=5;
+    bil->z=2;
+
+    bil->helhet=100;
+
+    bil->posx=10;
+    bil->posy=10;
+    bil->posz=bsize; // Ska nog inte initialiseras här..
+
+    bil->t1=1;
+    bil->t2=1;
+    bil->t3=1;
+    bil->t4=1;
+
+    bil->maxspeed=2.0f;
+    bil->curspeed=0.0f;
+    bil->accspeed=0.20f;
+    bil->maxbspeed=-1.0f;
+    bil->bromsspeed=0.3f;
+    bil->speeddown=0.10f;
+    // Orginal värdet
+    // bil->turnspeed=6;
+    // Nytt värde, den svänger trotsallt lite segt...
+    bil->turnspeed=8;
+
+    bil->angle=0;
+
+    bil->Points=0;
+
+}
+
+void car_render(struct car *bil) {
+    glPushMatrix();
+
+    glTranslatef(bil->posx, bil->posy, bil->posz);
+    glRotatef((float)bil->angle,0.0f,0.0f,1.0f);
+
+    glBindTexture(GL_TEXTURE_2D,world.texIDs[bil->t1]);
+
+    glBegin(GL_QUADS);
+
+        // Tak...
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),bil->z);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),bil->z);// -----------X
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),bil->z);// -----------X
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),bil->z);// X-----------
+
+        // Inget golv, för det kommer inte att synas... tror jag.
+
+        //Höger och vänster
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),bil->z);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),bil->z);// X-----------
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),0.0f);// X-----------
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),0.0f);// X-----------
+
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),bil->z);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),bil->z);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),0.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),0.0f);
+
+        // bak och fram
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),bil->z);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),bil->z);// -----------X
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),0.0f);// -----------X
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),0.0f);// X-----------
+
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),bil->z);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),bil->z);// -----------X
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),0.0f);// -----------X
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),0.0f);// X-----------
+    glEnd();
+
+    glPopMatrix();
 }
 
 /* Kamera */
@@ -1137,8 +1182,9 @@ int CalcGameVars()
 int DrawGLScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-	glLoadIdentity();
 
+	/* Set camera position */
+	glLoadIdentity();
 	glTranslatef(transx,transy,Distance+SpeedVar);
 
 	// Spelplanen
@@ -1214,62 +1260,14 @@ int DrawGLScene()
 	// Ritar upp bil(en/arna) --------------------------------
 
 	// GAAAH!!!
-	// öj, det fungerar... Men det fungerar nog inte om man ska ha fler bilar...
+	// öj, det fungerar... Men det fungerar nog inte om man ska ha fler bilar... <- Nuså. :p
 
-
-	glLoadIdentity();
-	glTranslatef(0.0f,0.0f,Distance+SpeedVar);
-	glRotatef((float)bil.angle,0.0f,0.0f,1.0f);
-
-	glBindTexture(GL_TEXTURE_2D,world.texIDs[bil.t1]);
-
-	//glColor3f(1.0f,0.0f,1.0f);
-	glBegin(GL_QUADS);
-
-	// Tak...
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil.x/2),0.0f+(bil.y/2),bil.z+bil.posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil.x/2),0.0f+(bil.y/2),bil.z+bil.posz);// -----------X
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);// -----------X
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);// X-----------
-
-	// Inget golv, för det kommer inte att synas... tror jag.
-
-	//Höger och vänster
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil.x/2),0.0f+(bil.y/2),bil.z+bil.posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);// X-----------
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(bil.x/2),0.0f-(bil.y/2),bil.posz);// X-----------
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil.x/2),0.0f+(bil.y/2),bil.posz);// X-----------
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(bil.x/2),0.0f+(bil.y/2),bil.z+bil.posz);
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil.x/2),0.0f-(bil.y/2),bil.posz);
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(bil.x/2),0.0f+(bil.y/2),bil.posz);
-
-	// bak och fram
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil.x/2),0.0f+(bil.y/2),bil.z+bil.posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil.x/2),0.0f+(bil.y/2),bil.z+bil.posz);// -----------X
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil.x/2),0.0f+(bil.y/2),bil.posz);// -----------X
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil.x/2),0.0f+(bil.y/2),bil.posz);// X-----------
-
-	glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);// X-----------
-	glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil.x/2),0.0f-(bil.y/2),bil.z+bil.posz);// -----------X
-	glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil.x/2),0.0f-(bil.y/2),bil.posz);// -----------X
-	glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil.x/2),0.0f-(bil.y/2),bil.posz);// X-----------
-
-
-	glEnd();
-
-	// NÄTVERKSSAK BORTTAGEN
+        car_render(&bil);
 
 	// Rita upp gubbbananerna...
 	// Hoho! De SNURRAR!!! :)))))
 
 	if(!Network) {
-		glLoadIdentity();
-		glTranslatef(transx, transy, Distance + SpeedVar);
 		for(loop1=0;loop1<nrgubbar;loop1++) {
 		    gubbe_render(&gubbar[loop1]);
 		}
