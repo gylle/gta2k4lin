@@ -158,7 +158,7 @@ struct gubbe {
 
 };
 const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
-GLuint	GubbeDispList = NULL;
+GLuint	GubbeDispList = 0;
 
 struct spelare {
 	// Poäng
@@ -696,8 +696,6 @@ int SetupNet()
 int InitGL()								//		 All Setup For OpenGL Goes Here
 {
 
-	static bool Varitherebefore;
-
 	if (!LoadGLTextures())							// Jump To Texture Loading Routine ( NEW )
 	{
 		printf("Bananeinar, det verkar inte som om den vill ladda texturerna.");
@@ -710,8 +708,6 @@ int InitGL()								//		 All Setup For OpenGL Goes Here
 	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 );
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
-
-	Varitherebefore=true;
 
 	float ratio = (float) width / (float) height;
 
@@ -1396,7 +1392,6 @@ int parse_options(int argc, char *argv[])
 {
 	char opt;
 	int option_index = 0;
-	int this_option_optind;
 	int ipv4_only = 0;
 	int ipv6_only = 0;
 	static struct option long_options[] = {
@@ -1411,8 +1406,6 @@ int parse_options(int argc, char *argv[])
 	const char *short_options = "s:p:n:46h";
 
 	while (1) {
-		this_option_optind = optind ? optind : 1;
-
 		opt = getopt_long(argc, argv, short_options,
 				long_options, &option_index);
 		if (opt == -1)
