@@ -41,7 +41,8 @@ struct lmq_msg {
 int lmq_init(struct lmq_queue *q) {
 	int fds[2];
 
-	pipe(fds);
+	if (pipe(fds))
+		return -1; /* errno set by pipe */
 
 	memset(q, 0, sizeof(struct lmq_queue));
 	q->notify_r = fds[0];
@@ -84,7 +85,11 @@ int lmq_send(struct lmq_queue *q, void *msg, size_t len, int prio) {
 
 	memset(qm, 0, sizeof(struct lmq_msg));
 
-	qm->data = (char *)malloc(len);
+	qm->data = (char *)malloc(len); /* This could be done with the same
+					   malloc as above, but we might want
+					   to return the pointer in a
+					   recv_alloc in the future if needed
+					   */
 	if (qm == NULL) {
 		errno = ENOMEM;
 		return -1;
