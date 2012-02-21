@@ -83,7 +83,10 @@ int sound_play_on_channel(enum sounds sound, int channel)
 
 	channel = Mix_PlayChannel(channel, sound_chunks[sound], 0);
 	if (channel == -1) {
-		fprintf(stderr, "Unable to play WAV file: %s\n", Mix_GetError());
+		/* Would like a numerical error and a #define, but noooo.. */
+		if (strcmp(Mix_GetError(), "No free channels available")) {
+			fprintf(stderr, "Unable to play sound: %s\n", Mix_GetError());
+		}
 	}
 
 	return channel;
