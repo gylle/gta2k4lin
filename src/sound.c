@@ -58,7 +58,7 @@ int load_sample(char *file, enum sounds sound) {
 	return 0;
 }
 
-int load_samples()				// Här loadar vi alla bananiga samples vi ska dra igång...
+static int load_samples()				// Här loadar vi alla bananiga samples vi ska dra igång...
 {
 	int errors = 0;
 	errors += load_sample("aj.ogg", aj0);
@@ -75,7 +75,7 @@ int load_samples()				// Här loadar vi alla bananiga samples vi ska dra igång.
 	return errors;
 }
 
-int play_sound_channel(enum sounds sound, int channel)
+int sound_play_on_channel(enum sounds sound, int channel)
 {
 	if (sound_chunks[sound] == NULL) {
 		fprintf(stderr, "Sound chunk is not loaded: %d\n", sound);
@@ -89,18 +89,18 @@ int play_sound_channel(enum sounds sound, int channel)
 	return channel;
 }
 
-int play_sound(enum sounds sound)
+int sound_play(enum sounds sound)
 {
-	return play_sound_channel(sound, -1);
+	return sound_play_on_channel(sound, -1);
 }
 
-void channel_finished(int channel) {
+static void channel_finished(int channel) {
 	int i;
 
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		if (cont_sounds[i].channel == channel) {
 			cont_sounds[i].channel =
-				play_sound_channel(cont_sounds[i].sound,
+				sound_play_on_channel(cont_sounds[i].sound,
 						cont_sounds[i].channel);
 			return;
 		}
@@ -108,7 +108,7 @@ void channel_finished(int channel) {
 
 }
 
-void cont_sound_play(enum sounds sound) {
+void sound_cont_play(enum sounds sound) {
 	int i;
 
 	/* Already playing? */
@@ -123,14 +123,14 @@ void cont_sound_play(enum sounds sound) {
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		if (cont_sounds[i].channel == -1) {
 			cont_sounds[i].sound = sound;
-			cont_sounds[i].channel = play_sound(sound);
+			cont_sounds[i].channel = sound_play(sound);
 			return;
 		}
 	}
 
 }
 
-void cont_sound_stop(enum sounds sound, int halt) {
+void sound_cont_stop(enum sounds sound, int halt) {
 	int i, channel;
 
 	/* Halt and free slot */
@@ -146,7 +146,7 @@ void cont_sound_stop(enum sounds sound, int halt) {
 
 }
 
-int init_sound() {
+int sound_init() {
 	int i;
 
 	int audio_rate = 22050;
@@ -166,8 +166,8 @@ int init_sound() {
 		cont_sounds[i].channel = -1;
 	}
 
-	play_sound(welcome);
-	cont_sound_play(farlig);
+	sound_play(welcome);
+	sound_cont_play(farlig);
 
 	return 0;
 }

@@ -755,12 +755,12 @@ int RespondToKeys()
 			bil.t1=1;
 			mbil.Points++;
 
-			cont_sound_stop(brinner, 1);
-			play_sound(respawn);
+			sound_cont_stop(brinner, 1);
+			sound_play(respawn);
 
 		}
 		else {
-			cont_sound_play(brinner);
+			sound_cont_play(brinner);
 		}
 	}
 
@@ -785,7 +785,7 @@ int RespondToKeys()
 			bil.curspeed=0.0f;
 
 		if (!broms_in_progress) {
-			play_sound(broms);
+			sound_play(broms);
 			broms_in_progress = 1;
 		}
 
@@ -800,10 +800,10 @@ int RespondToKeys()
 	}
 
 	if(keys[SDLK_TAB]) {
-		cont_sound_play(tut);
+		sound_cont_play(tut);
 	}
 	else {
-		cont_sound_stop(tut, 0);
+		sound_cont_stop(tut, 0);
 	}
 
 	float sttmp;
@@ -1017,7 +1017,7 @@ int CalcGameVars()
 
                                                 int damage = abs((int)(bil.curspeed*5));
                                                 if(damage) {
-                                                    play_sound(krasch);
+                                                    sound_play(krasch);
 
                                                     bil.helhet -= damage;
                                                     if(bil.helhet <= 0) {
@@ -1067,9 +1067,9 @@ int CalcGameVars()
 							struct timeval tv;
 							gettimeofday(&tv, NULL);
 							if(tv.tv_usec % 2)
-								play_sound(aj0);
+								sound_play(aj0);
 							else
-								play_sound(aj1);
+								sound_play(aj1);
 							player.runovers++;
 							/*} else if(bil.curspeed<1.0f && bil.curspeed>-1.0f) { // det ska vara så att man skjuter dem framför om man kör på dem för sakta...
 							  gubbar[loop1].tmpx=tmpx;
@@ -1077,7 +1077,7 @@ int CalcGameVars()
 					} else {
 						//gubbar[loop1].angle=-gubbar[loop1].angle;
 						gubbar[loop1].angle+=180;
-						play_sound(move);
+						sound_play(move);
 					}
 					}
 
@@ -1570,7 +1570,7 @@ int main(int argc, char *argv[])
 	Uint32 TimerTicks;
 
         init_hud();
-	init_sound();
+	sound_init();
 
 	while(!done)
 	{

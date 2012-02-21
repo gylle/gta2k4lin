@@ -14,14 +14,14 @@ enum sounds {
 	welcome,
 };
 
-int play_sound_channel(enum sounds sound, int channel);
+int sound_play_on_channel(enum sounds sound, int channel);
 
-int play_sound(enum sounds sound);
+int sound_play(enum sounds sound);
 
-int init_sound();
+int sound_init();
 
-void cont_sound_play(enum sounds sound);
+void sound_cont_play(enum sounds sound);
 
-void cont_sound_stop(enum sounds sound, int halt);
+void sound_cont_stop(enum sounds sound, int halt);
 
 #endif
