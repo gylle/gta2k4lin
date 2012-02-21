@@ -102,7 +102,7 @@ int network_amsg_recv(char *msg, unsigned long *id, unsigned size) {
 		lmq_recv(&amsg_outgress, id, sizeof(unsigned long), NULL);
 }
 
-int register_id(unsigned long id, char *nick) {
+static int register_id(unsigned long id, char *nick) {
 	int ret = -1;
 	int i;
 
@@ -128,7 +128,7 @@ out:
 	return ret;
 }
 
-int remove_id(unsigned long id) {
+static int remove_id(unsigned long id) {
 	int ret = -1;
 	int i;
 
@@ -166,7 +166,7 @@ const char *network_lookup_id(unsigned long id) {
 	return ret;
 }
 
-ssize_t send_all(int sock, void *b, ssize_t len, int flags) {
+static ssize_t send_all(int sock, void *b, ssize_t len, int flags) {
 	unsigned char *buf = (unsigned char *)b;
 	ssize_t sent = 0;
 	ssize_t r;
@@ -184,7 +184,7 @@ ssize_t send_all(int sock, void *b, ssize_t len, int flags) {
 	return sent;
 }
 
-ssize_t recv_exact(int sock, void *b, ssize_t len, int flags) {
+static ssize_t recv_exact(int sock, void *b, ssize_t len, int flags) {
 	unsigned char *buf = (unsigned char *)b;
 	ssize_t recvd = 0;
 	ssize_t r;
@@ -202,7 +202,7 @@ ssize_t recv_exact(int sock, void *b, ssize_t len, int flags) {
 	return recvd;
 }
 
-int handle_data(char *buf, size_t size) {
+static int handle_data(char *buf, size_t size) {
 	uint16_t u16;
 	uint32_t u32;
 	uint16_t event;
@@ -314,7 +314,7 @@ int handle_data(char *buf, size_t size) {
 /* This should be large enough to hold the biggest message size, which I
  * believe is amsg with a 1023-byte msg, so 1027 bytes */
 #define RBUF_SIZE 2048
-void *loop(void *arg) {
+static void *loop(void *arg) {
 	int sock = *((int *)arg);
 	char sbuf[1024];
 	char rbuf[RBUF_SIZE];
