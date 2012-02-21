@@ -1,4 +1,4 @@
-int init_hud();
+int hud_init();
 void hud_render();
 
 void hud_printf(const char *fmt, ...);

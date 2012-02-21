@@ -1569,7 +1569,7 @@ int main(int argc, char *argv[])
 	// TODO: Implementera frameskip...
 	Uint32 TimerTicks;
 
-        init_hud();
+        hud_init();
 	sound_init();
 
 	while(!done)

@@ -88,7 +88,7 @@ static void hud_clear() {
     SDL_FillRect(hud_data->surface, NULL, 0);
 }
 
-int init_hud() {
+int hud_init() {
     if(TTF_Init() == -1) {
         printf("TTF_Init failed: %s\n", TTF_GetError());
         return 0;
