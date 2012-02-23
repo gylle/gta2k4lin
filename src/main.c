@@ -66,9 +66,10 @@
 #include "hud.h"
 #include "object.h"
 
-int width = 640;
-int height = 480;
-int bpp = 32; // Vi gillar 32 här dåva
+int initial_width = 640;
+int initial_height = 480;
+const int sdl_video_flags = SDL_OPENGL | SDL_RESIZABLE;
+const int sdl_bpp = 32; // Vi gillar 32 här dåva
 float bsize=5.0f;
 
 #define bool  int
@@ -625,8 +626,25 @@ static int LoadCars()   // och gubbar.
 	return true;
 }
 
+static void gl_resize(int width, int height) {
 
-static int InitGL()								//		 All Setup For OpenGL Goes Here
+    float ratio = (float) width / (float) height;
+
+    /* Setup our viewport. */
+    glViewport( 0, 0, width, height );
+
+    /*
+     * Change to the projection matrix and set
+     * our viewing volume.
+     */
+    glMatrixMode( GL_PROJECTION );
+    glLoadIdentity( );
+    gluPerspective( 60.0, ratio, 1.0, 1024.0 );
+
+    glMatrixMode( GL_MODELVIEW );
+}
+
+static int InitGL(int width, int height) //		 All Setup For OpenGL Goes Here
 {
 
 	if (!LoadGLTextures())							// Jump To Texture Loading Routine ( NEW )
@@ -642,8 +660,6 @@ static int InitGL()								//		 All Setup For OpenGL Goes Here
 	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
 
 
-	float ratio = (float) width / (float) height;
-
 	/* Our shading model--Gouraud (smooth). */
 	glShadeModel( GL_SMOOTH );
 
@@ -655,18 +671,6 @@ static int InitGL()								//		 All Setup For OpenGL Goes Here
 	/* Set the clear color. */
 	glClearColor( 0, 0, 1, 0 );
 
-	/* Setup our viewport. */
-	glViewport( 0, 0, width, height );
-
-	/*
-	 * Change to the projection matrix and set
-	 * our viewing volume.
-	 */
-	glMatrixMode( GL_PROJECTION );
-	glLoadIdentity( );
-	gluPerspective( 60.0, ratio, 1.0, 1024.0 );
-
-	glMatrixMode( GL_MODELVIEW );
 	glShadeModel(GL_SMOOTH);							// Enable Smooth Shading
 	glClearDepth(1.0f);									// Depth Buffer Setup
 	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
@@ -675,6 +679,7 @@ static int InitGL()								//		 All Setup For OpenGL Goes Here
 	glBlendFunc(GL_SRC_ALPHA,GL_ONE);
 	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
 
+	gl_resize(width, height);
 
 	return true;										// Initialization Went OK
 }
@@ -1173,6 +1178,11 @@ static void handle_input_field(SDL_keysym key, int type) {
     }
 }
 
+static void event_handle_resize(SDL_ResizeEvent *resize) {
+    SDL_SetVideoMode(resize->w, resize->h, sdl_bpp, sdl_video_flags);
+    gl_resize(resize->w, resize->h);
+}
+
 static int CheckaEvents()
 {
 	SDL_Event event;
@@ -1187,6 +1197,10 @@ static int CheckaEvents()
 		case SDL_KEYUP:
 			handle_input_field(event.key.keysym, SDL_KEYUP);
 			keys[event.key.keysym.sym]=false;
+			break;
+
+		case SDL_VIDEORESIZE:
+			event_handle_resize(&event.resize);
 			break;
 
 			/* SDL_QUIT event (window close) */
@@ -1385,14 +1399,14 @@ int main(int argc, char *argv[])
 		Network = true;
 	}
 
-	screen = SDL_SetVideoMode(width, height, bpp, SDL_OPENGL);
+	screen = SDL_SetVideoMode(initial_width, initial_height, sdl_bpp, sdl_video_flags);
 	if (screen == NULL)
 	{
 		printf("SetVideoMode failed (EInar)\n");
 		exit(1);
 	}
 
-	InitGL();
+	InitGL(initial_width, initial_height);
 	LoadCars();
 	LoadLevel();
 
