@@ -1,6 +1,6 @@
 TARGETS=gta2k4lin
 
-C_SOURCES=src/main.c src/sound.c src/network.c src/hud.c src/lmq.c
+C_SOURCES=src/main.c src/sound.c src/network.c src/hud.c src/lmq.c src/object.c
 
 CC=gcc
 
@@ -21,7 +21,7 @@ endif
 
 LIBS=$(shell pkg-config --libs $(LIBRARIES)) $(LIBS_EXTRA)
 
-CFLAGS=-O2 -Wall -I./src $(shell pkg-config --cflags $(LIBRARIES))
+CFLAGS=-O2 -Wall -I./src $(shell pkg-config --cflags $(LIBRARIES)) -lm
 
 CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpermissive
 
@@ -38,7 +38,7 @@ dist:
 depend:
 	make -B Makefile.depend
 
-gta2k4lin: src/main.o src/sound.o src/network.o src/hud.o src/lmq.o
+gta2k4lin: src/main.o src/sound.o src/network.o src/hud.o src/lmq.o src/object.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 Makefile.depend: $(CXX_SOURCES) $(C_SOURCES)

@@ -64,6 +64,7 @@
 #include "sound.h"
 #include "network.h"
 #include "hud.h"
+#include "object.h"
 
 int width = 640;
 int height = 480;
@@ -114,48 +115,38 @@ struct cube {
 	int texturenr;
 	// Ett namn på stället man är.
 	const char* beskrivning;
+
+	struct object o;
 };
 
 struct car {
-	// Storleken:
-	float x,y,z;
-	// Positionen:
-	float posx,posy,posz;
 	// Texturer, nr1: tak. nr2: sidor. nr3: fram. nr4: bak:
 	int t1,t2,t3,t4;
 	// Fartsaker
-	float maxspeed,maxbspeed, curspeed, accspeed, bromsspeed;
+	float maxspeed,maxbspeed, accspeed, bromsspeed;
 	int turnspeed;
 	// Hur fort bilen stannar om man inte gasar
 	float speeddown;
-	// Hur många grader bilen är vriden...
-	int angle;
 	// Hur hel bilen är(%). 100 är helhel, 0 är heltrasig.
 	int helhet;
 	// Poäng. I Multiplayer spel hur många "frags" man har...
 	int Points;
 
+	struct object o;
 };
 
 
 struct gubbe {
-	// Storleken:
-	float x,y,z;
-	// Positionen:
-	float posx,posy,posz;
 	// Texturer. ltexture2=huvudet. ltexture=resten. dtexturer=texture då gubben dött...
 	int ltexture, ltexture2,  dtexture;
 	// Fartsaker...
-	float maxspeed,maxbspeed,curspeed,accspeed;
-	// Hur många grader gubben är vriden...
-	int angle;
+	float maxspeed,maxbspeed,accspeed;
 	// Lever?
 	bool alive;
 	// Tid tills han lever igen...
 	int atimer;
-	// 2 temporära grejjer... Används framförallt av förflyttnings funktionen...
-	float tmpx,tmpy;
 
+	struct object o;
 };
 const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
 GLuint	GubbeDispList = 0;
@@ -198,22 +189,23 @@ struct car mbil;		 // andra bilen i multiplayer
 static void init_gubbe(struct gubbe *g) {
     g->alive=true;
 
-    g->curspeed=0.0f;
+    g->o.speed=0.0f;
     g->maxspeed=0.3f;
     g->accspeed=0.15f;
     g->maxbspeed=0.2f;
 
-    //g->angle=0;
+    //g->o.angle=0;
 
-    g->x=1.0f;
-    g->y=1.0f;
-    g->z=1.9f;
+    g->o.size_x=1.0f;
+    g->o.size_y=1.0f;
+    g->o.size_z=1.9f;
+    object_update_circle(&(g->o));
 
-    g->posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
-    g->posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
-    g->angle=rand() % 360;
+    g->o.x=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
+    g->o.y=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
+    g->o.angle=rand() % 360;
 
-    g->posz=bsize;
+    g->o.z=bsize;
 
     g->ltexture=11;
     g->ltexture2=13;
@@ -223,8 +215,6 @@ static void init_gubbe(struct gubbe *g) {
 }
 
 static void gubbe_move(struct gubbe *g) {
-    float tmpangle;
-
     // den här funktionen som bestämmer vad gubbarna ska göra måste skrivas om,
     // Gubbarna är totalt urblåsta.
 
@@ -232,13 +222,13 @@ static void gubbe_move(struct gubbe *g) {
         int tmprand=rand() % 100; // Ejjj, det wooorkar...
 
         if(tmprand==0 && tmprand<3)  // gubben ska bara vrida sig fååå gånger..
-            g->angle+=10;
+            g->o.angle+=10;
 
         if(tmprand>=3 && tmprand<5)  // Ge även möjligheten att vända åt andra hållet...
-            g->angle-=10;
+            g->o.angle-=10;
 
         if(tmprand>=5 && tmprand<=100)
-            g->curspeed=g->curspeed+g->accspeed;
+            g->o.speed=g->o.speed+g->accspeed;
 
 
 
@@ -249,63 +239,35 @@ static void gubbe_move(struct gubbe *g) {
             g->atimer=0;
             g->alive=true;
 
-            g->posx=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
-            g->posy=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
-            g->angle=rand() % 360;
+            g->o.x=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
+            g->o.y=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
+            g->o.angle=rand() % 360;
         }
     }
 
-    if(g->curspeed<0) {
-        if(g->curspeed<g->maxbspeed)
-            g->curspeed=g->maxbspeed;
+    if(g->o.speed<0) {
+        if(g->o.speed<g->maxbspeed)
+            g->o.speed=g->maxbspeed;
     } else {
-        if(g->curspeed>g->maxspeed)
-            g->curspeed=g->maxspeed;
+        if(g->o.speed>g->maxspeed)
+            g->o.speed=g->maxspeed;
     }
 
-    if(g->angle<0)
-        g->angle=g->angle+360;
-    if(g->angle>359)
-        g->angle=g->angle-360;
+    if(g->o.angle<0)
+        g->o.angle=g->o.angle+360;
+    if(g->o.angle>359)
+        g->o.angle=g->o.angle-360;
 
-
-    tmpangle=(float)g->angle;
-
-    if(g->angle>=0 && g->angle<=90) {
-        g->tmpx=-((tmpangle/90.0f)*g->curspeed);
-        g->tmpy=g->curspeed+g->tmpx;
-    }
-
-    if(g->angle>=270 && g->angle<=360) {
-        tmpangle-=270.0f;
-        g->tmpy=(tmpangle/90.0f)*g->curspeed;
-        g->tmpx=g->curspeed-g->tmpy;
-    }
-
-    if(g->angle>90 && g->angle<=180) {
-        tmpangle-=90.0f;
-        g->tmpy=-((tmpangle/90.0f)*g->curspeed);
-        g->tmpx=-(g->curspeed+g->tmpy);
-    }
-
-    if(g->angle>180 && g->angle<270) {
-        tmpangle-=180.0f;
-        g->tmpx=(tmpangle/90.0f)*g->curspeed;
-        g->tmpy=-(g->curspeed-g->tmpx);
-    }
-
-    if(!g->alive) {
-        g->tmpx=0;
-        g->tmpy=0;
-    }
+    if (g->alive)
+	object_forward(&(g->o));
 }
 
 static void gubbe_render(struct gubbe *g) {
     glPushMatrix();
 
     // HAHA!!! Det gick till slut! :)
-    glTranslatef(g->posx,g->posy,0);//Distance+SpeedVar);
-    glRotatef((float)g->angle,0.0f,0.0f,1.0f);
+    glTranslatef(g->o.x,g->o.y,0);//Distance+SpeedVar);
+    glRotatef((float)g->o.angle,0.0f,0.0f,1.0f);
 
     if(g->alive) {
         if(!NoBlend)
@@ -324,10 +286,10 @@ static void gubbe_render(struct gubbe *g) {
 
         // Ovanifrån...
 
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(g->x/2),0.0f+(g->y/2),bsize);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(g->x/2),0.0f+(g->y/2),bsize);// -----------X
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(g->x/2),0.0f-(g->y/2),bsize);// -----------X
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(g->x/2),0.0f-(g->y/2),bsize);// X-----------
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(g->o.size_x/2),0.0f+(g->o.size_y/2),bsize);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(g->o.size_x/2),0.0f+(g->o.size_y/2),bsize);// -----------X
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(g->o.size_x/2),0.0f-(g->o.size_y/2),bsize);// -----------X
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(g->o.size_x/2),0.0f-(g->o.size_y/2),bsize);// X-----------
         glEnd();
 
     }
@@ -349,10 +311,10 @@ static void init_gubbe_displaylist() {
 
     // Ovanifrån...
 
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// -----------X
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// -----------X
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// -----------X
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// -----------X
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
     glEnd();
 
     // Börja en ny glBegin för att vi ska kunna texturemappa huvudet och resten seperat...
@@ -363,27 +325,27 @@ static void init_gubbe_displaylist() {
     //Höger och vänster
 
 
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].posz);// X-----------
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].posz);// X-----------
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.z);// X-----------
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.z);// X-----------
 
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].posz);
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].posz);
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.z);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.z);
 
     // bak och fram
 
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// -----------X
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].posz);// -----------X
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f+(gubbar[0].y/2),gubbar[0].posz);// X-----------
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// -----------X
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.z);// -----------X
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.z);// X-----------
 
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// X-----------
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].z+gubbar[0].posz);// -----------X
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].posz);// -----------X
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].x/2),0.0f-(gubbar[0].y/2),gubbar[0].posz);// X-----------
+    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
+    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// -----------X
+    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.z);// -----------X
+    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.z);// X-----------
 
 
     glEnd();
@@ -394,15 +356,16 @@ static void init_gubbe_displaylist() {
 void init_car(struct car *bil) {
     // Ladda en standard bil...
 
-    bil->x=3;
-    bil->y=5;
-    bil->z=2;
+    bil->o.size_x=3;
+    bil->o.size_y=5;
+    bil->o.size_z=2;
+    object_update_circle(&(bil->o));
 
     bil->helhet=100;
 
-    bil->posx=10;
-    bil->posy=10;
-    bil->posz=bsize; // Ska nog inte initialiseras här..
+    bil->o.x=10;
+    bil->o.y=10;
+    bil->o.z=bsize; // Ska nog inte initialiseras här..
 
     bil->t1=1;
     bil->t2=1;
@@ -410,7 +373,7 @@ void init_car(struct car *bil) {
     bil->t4=1;
 
     bil->maxspeed=2.0f;
-    bil->curspeed=0.0f;
+    bil->o.speed=0.0f;
     bil->accspeed=0.20f;
     bil->maxbspeed=-1.0f;
     bil->bromsspeed=0.3f;
@@ -420,7 +383,7 @@ void init_car(struct car *bil) {
     // Nytt värde, den svänger trotsallt lite segt...
     bil->turnspeed=8;
 
-    bil->angle=0;
+    bil->o.angle=0;
 
     bil->Points=0;
 
@@ -429,42 +392,42 @@ void init_car(struct car *bil) {
 void car_render(struct car *bil) {
     glPushMatrix();
 
-    glTranslatef(bil->posx, bil->posy, bil->posz);
-    glRotatef((float)bil->angle,0.0f,0.0f,1.0f);
+    glTranslatef(bil->o.x, bil->o.y, bil->o.z);
+    glRotatef((float)bil->o.angle,0.0f,0.0f,1.0f);
 
     glBindTexture(GL_TEXTURE_2D,world.texIDs[bil->t1]);
 
     glBegin(GL_QUADS);
 
         // Tak...
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),bil->z);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),bil->z);// -----------X
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),bil->z);// -----------X
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),bil->z);// X-----------
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// -----------X
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// -----------X
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// X-----------
 
         // Inget golv, för det kommer inte att synas... tror jag.
 
         //Höger och vänster
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),bil->z);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),bil->z);// X-----------
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),0.0f);// X-----------
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),0.0f);// X-----------
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// X-----------
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),0.0f);// X-----------
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),0.0f);// X-----------
 
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),bil->z);
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),bil->z);
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),0.0f);
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),0.0f);
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),0.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),0.0f);
 
         // bak och fram
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),bil->z);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),bil->z);// -----------X
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f+(bil->y/2),0.0f);// -----------X
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f+(bil->y/2),0.0f);// X-----------
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// -----------X
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),0.0f);// -----------X
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),0.0f);// X-----------
 
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),bil->z);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),bil->z);// -----------X
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->x/2),0.0f-(bil->y/2),0.0f);// -----------X
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->x/2),0.0f-(bil->y/2),0.0f);// X-----------
+        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// X-----------
+        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// -----------X
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),0.0f);// -----------X
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),0.0f);// X-----------
     glEnd();
 
     glPopMatrix();
@@ -588,15 +551,21 @@ int LoadLevel()
 
 	for(loop1=0;loop1<world.nrcubex;loop1++)
 		for(loop2=0;loop2<world.nrcubey;loop2++) {
-			map_cube(world, loop1, loop2).z=0.0f;
+			map_cube(world, loop1, loop2).o.size_x=bsize * 2;
+			map_cube(world, loop1, loop2).o.size_y=bsize * 2;
+			map_cube(world, loop1, loop2).o.size_z=bsize * 2;
+			map_cube(world, loop1, loop2).o.x=loop1 * bsize * 2;
+			map_cube(world, loop1, loop2).o.y=loop2 * bsize * 2;
+			map_cube(world, loop1, loop2).o.z=0.0f;
 			map_cube(world, loop1, loop2).texturenr=0;
 			map_cube(world, loop1, loop2).beskrivning="Testbeskrivning";
+			object_update_circle(&(map_cube(world, loop1, loop2).o));
 		}
 
-	map_cube(world, 0, 0).z=0.0f;
+	map_cube(world, 0, 0).o.z = bsize * 2;
 	map_cube(world, 0, 0).texturenr=1;
 
-	map_cube(world, 0, 1).z=0.0f;
+	map_cube(world, 0, 1).o.z = bsize * 2;
 	map_cube(world, 0, 1).texturenr=1;
 
 	// Vägen -------------------------------
@@ -620,27 +589,27 @@ int LoadLevel()
 	// "Väggen" runtomkring
 	for(loop1=0;loop1<world.nrcubey;loop1++) {
 		map_cube(world, 0, loop1).texturenr=4;
-		map_cube(world, 0, loop1).z=1.0f;
+		map_cube(world, 0, loop1).o.z = bsize * 2;
 	}
 
 	for(loop1=0;loop1<world.nrcubey;loop1++) {
 		map_cube(world, world.nrcubex-1, loop1).texturenr=4;
-		map_cube(world, world.nrcubex-1, loop1).z=1.0f;
+		map_cube(world, world.nrcubex-1, loop1).o.z = bsize * 2;
 	}
 
 	for(loop1=0;loop1<world.nrcubex;loop1++) {
 		map_cube(world, loop1, 0).texturenr=4;
-		map_cube(world, loop1, 0).z=1.0f;
+		map_cube(world, loop1, 0).o.z = bsize * 2;
 	}
 	for(loop1=0;loop1<world.nrcubex;loop1++) {
 		map_cube(world, loop1, world.nrcubey-1).texturenr=4;
-		map_cube(world, loop1, world.nrcubey-1).z=1.0f;
+		map_cube(world, loop1, world.nrcubey-1).o.z = bsize * 2;
 	}
 
 	// Vi lägger in lite buskar
 	for(loop1=1;loop1<(world.nrcubey/2-1);loop1+=2) {
 		map_cube(world, world.nrcubex/2, loop1).texturenr=15;
-		map_cube(world, world.nrcubex/2, loop1).z=1.0f;
+		map_cube(world, world.nrcubex/2, loop1).o.z = bsize * 2;
 	}
 
 	// Vägen in till mitten och den fina credits saken där.
@@ -648,7 +617,7 @@ int LoadLevel()
 		map_cube(world, loop1, world.nrcubey/2).texturenr=7;
 
 	map_cube(world, world.nrcubex/2, world.nrcubey/2).texturenr=10;
-	map_cube(world, world.nrcubex/2, world.nrcubey/2).z=2.0f;
+	map_cube(world, world.nrcubex/2, world.nrcubey/2).o.z = bsize * 2 * 2;
 
 	return true;
 }
@@ -661,15 +630,15 @@ int LoadCars()   // och gubbar.
 
 	if(Network) {
 		if(Server) {
-			bil.posx=10;
-			bil.posy=10;
-			mbil.posx=50;
-			mbil.posy=50;
+			bil.o.x=10;
+			bil.o.y=10;
+			mbil.o.x=50;
+			mbil.o.y=50;
 		} else {
-			mbil.posx=10;
-			mbil.posy=10;
-			bil.posx=50;
-			bil.posy=50;
+			mbil.o.x=10;
+			mbil.o.y=10;
+			bil.o.x=50;
+			bil.o.y=50;
 		}
         }
 
@@ -767,11 +736,11 @@ int RespondToKeys()
 
 	if(!(bil.helhet==0)) {
 		if(keys[SDLK_UP]) {
-			bil.curspeed=bil.curspeed+bil.accspeed;
+			bil.o.speed=bil.o.speed+bil.accspeed;
 		}
 
 		if(keys[SDLK_DOWN]) {
-			bil.curspeed=bil.curspeed-bil.accspeed;
+			bil.o.speed=bil.o.speed-bil.accspeed;
 		}
 	}
 
@@ -779,20 +748,20 @@ int RespondToKeys()
 
 	if(keys[SDLK_SPACE]) {
 		brakepressed=true;
-		if(bil.curspeed<0.0f && bil.curspeed>-bil.bromsspeed)
-			bil.curspeed=0.0f;
-		if(bil.curspeed>0.0f && bil.curspeed<bil.bromsspeed)
-			bil.curspeed=0.0f;
+		if(bil.o.speed<0.0f && bil.o.speed>-bil.bromsspeed)
+			bil.o.speed=0.0f;
+		if(bil.o.speed>0.0f && bil.o.speed<bil.bromsspeed)
+			bil.o.speed=0.0f;
 
 		if (!broms_in_progress) {
 			sound_play(broms);
 			broms_in_progress = 1;
 		}
 
-		if(bil.curspeed<0.0f)
-			bil.curspeed+=bil.bromsspeed;
-		if(bil.curspeed>0.0f)
-			bil.curspeed-=bil.bromsspeed;
+		if(bil.o.speed<0.0f)
+			bil.o.speed+=bil.bromsspeed;
+		if(bil.o.speed>0.0f)
+			bil.o.speed-=bil.bromsspeed;
 
 	}
 	else {
@@ -811,22 +780,22 @@ int RespondToKeys()
 
 
 	if(keys[SDLK_LEFT]) {
-		sttmp=bil.curspeed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och
+		sttmp=bil.o.speed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och
 		if(brakepressed)
 			sttmp+=0.7f;
 
-		if(bil.curspeed!=0.0f)
-			bil.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
+		if(bil.o.speed!=0.0f)
+			bil.o.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
 	}
 
 	if(keys[SDLK_RIGHT]) {
-		sttmp=bil.curspeed/bil.maxspeed;
+		sttmp=bil.o.speed/bil.maxspeed;
 		//std::cout << "HOGER" << std::endl;
 		if(brakepressed)
 			sttmp+=0.7f;
 
-		if(bil.curspeed!=0.0f)
-			bil.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
+		if(bil.o.speed!=0.0f)
+			bil.o.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
 	}
 
 	// Detta är debug grejjer/saker som inte ska vara kvar i "riktiga" versionen...
@@ -891,61 +860,34 @@ int CalcGameVars()
 {
 
 	// Tar hand om hastigheten...
-	if(bil.curspeed>bil.maxspeed)
-		bil.curspeed=bil.maxspeed;
+	if(bil.o.speed>bil.maxspeed)
+		bil.o.speed=bil.maxspeed;
 
-	if(bil.curspeed<bil.maxbspeed)
-		bil.curspeed=bil.maxbspeed;
+	if(bil.o.speed<bil.maxbspeed)
+		bil.o.speed=bil.maxbspeed;
 
-	if(bil.curspeed<0.0f && bil.curspeed>-bil.speeddown)
-		bil.curspeed=0.0f;
-	if(bil.curspeed>0.0f && bil.curspeed<bil.speeddown)
-		bil.curspeed=0.0f;
+	if(bil.o.speed<0.0f && bil.o.speed>-bil.speeddown)
+		bil.o.speed=0.0f;
+	if(bil.o.speed>0.0f && bil.o.speed<bil.speeddown)
+		bil.o.speed=0.0f;
 
-	if(bil.curspeed>0)
-		bil.curspeed=bil.curspeed-bil.speeddown;
-	if(bil.curspeed<0)
-		bil.curspeed=bil.curspeed+bil.speeddown;
+	if(bil.o.speed>0)
+		bil.o.speed=bil.o.speed-bil.speeddown;
+	if(bil.o.speed<0)
+		bil.o.speed=bil.o.speed+bil.speeddown;
 
 
-	if(bil.angle<0)
-		bil.angle=bil.angle+360;
-	if(bil.angle>359)
-		bil.angle=bil.angle-360;
+	if(bil.o.angle<0)
+		bil.o.angle=bil.o.angle+360;
+	if(bil.o.angle>359)
+		bil.o.angle=bil.o.angle-360;
 
 
 	// Svänger bilen så att den åker åt rätt håll
 
 	float tmpx=0.0f,tmpy=0.0f;
-	float tmpangle;
 
-	tmpangle=(float)bil.angle;
-
-	// Det här fungerar, nu är det bara 3/4 kvar att fixa :D
-	if(bil.angle>=0 && bil.angle<=90) {
-		tmpx=-((tmpangle/90.0f)*bil.curspeed);
-		tmpy=bil.curspeed+tmpx;
-	}
-	// EJ!! Den workar, bara 2/4 kvar! :)))
-	if(bil.angle>=270 && bil.angle<=360) {
-		tmpangle-=270.0f;
-		tmpy=(tmpangle/90.0f)*bil.curspeed;
-		tmpx=bil.curspeed-tmpy;
-	}
-
-	// WEHOOOOO!!! 1/4 KVAR!!!
-	if(bil.angle>90 && bil.angle<=180) {
-		tmpangle-=90.0f;
-		tmpy=-((tmpangle/90.0f)*bil.curspeed);
-		tmpx=-(bil.curspeed+tmpy);
-	}
-
-	// FÄRDIGT!!!
-	if(bil.angle>180 && bil.angle<270) {
-		tmpangle-=180.0f;
-		tmpx=(tmpangle/90.0f)*bil.curspeed;
-		tmpy=-(bil.curspeed-tmpx);
-	}
+	object_forward(&bil.o);
 
 	///////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////
@@ -982,16 +924,6 @@ int CalcGameVars()
 	   HÄÄÄÄR ÄR DET VIIIKTIGAST JUST NUUUUUU!!!!!!!!!!!!!!!!!!
 	   ------------------------------------------------------------ */
 
-	float tmpbilx, tmpbily;
-
-	/*if((bil.angle>=75 && bil.angle<=105) || (bil.angle>=255 && bil.angle<= 285)) {
-	  tmpbilx=bil.y;  // Kompensera lite för att bilen är olika stor och bred....
-	  tmpbily=bil.x;	// BANAN!! Detta fungerade, men risken är att bilen fastnar i väggen...
-	  } else { */
-	tmpbilx=bil.x;
-	tmpbily=bil.y;
-	//}
-
 	/////////////////////////////////////////////////////////////////////////////////
 	/// EINAR!!! Det här kommer ju att dra lika mycket CPU som... jag vet inte vad...
 	/////////////////////////////////////////////////////////////////////////////////
@@ -1002,32 +934,26 @@ int CalcGameVars()
 
 	// Det kan tyckas vara onödigt att kolla alla kuber på banan... fixa så att den kollar bara de närmaste...
 	// kontrollera så att inte bilen krockar med en stor KUUB!
-	for(loop1=0 ;loop1<world.nrcubex;loop1++)
+	for(loop1=0 ;loop1<world.nrcubex;loop1++) {
 		for(loop2=0;loop2<world.nrcubey;loop2++) {
-			if(map_cube(world, loop1, loop2).z!=0.0f) {		// Om inte kuben är ett underlag...
+			if (object_colliding(&(map_cube(world, loop1, loop2).o), &bil.o)) {
+				player.krockar++;
 
-				if(bil.posx+tmpx+tmpbilx/2>=CalcMapPlace(loop1,loop2,0)-bsize && bil.posx+tmpx-tmpbilx/2<=CalcMapPlace(loop1,loop2,0)+bsize)
-					if(bil.posy+tmpy+tmpbily/2>=CalcMapPlace(loop1,loop2,1)-bsize && bil.posy+tmpy-tmpbily/2<=CalcMapPlace(loop1,loop2,1)+bsize) {
-						// Vi stannar bilen under den här framen för att inte bilen ska åka in där iallafall...
-						tmpx=0.0f; tmpy=0.0f;
-						// EJJ, SÅ HÄR SKA DET JU VARA!!!!!
-						bil.curspeed=-bil.curspeed;
-						player.krockar++;
-						//std::cout << "KROCK!";
+				int damage = abs((int)(bil.o.speed*5));
+				if (damage) {
+					sound_play(krasch);
 
-                                                int damage = abs((int)(bil.curspeed*5));
-                                                if(damage) {
-                                                    sound_play(krasch);
-
-                                                    bil.helhet -= damage;
-                                                    if(bil.helhet <= 0) {
-                                                        bil.helhet = 0;
-                                                        bil.t1=14;
-                                                    }
-                                                }
+					bil.helhet -= damage;
+					if (bil.helhet <= 0) {
+						bil.helhet = 0;
+						bil.t1=14;
 					}
+				}
+				object_backward(&bil.o);
+				bil.o.speed = 0;
 			}
 		}
+	}
 
 
 	// Om vi spelar nätverk, så ska vi även dra CPU på att kolla om andra bilen har krockat...
@@ -1049,37 +975,26 @@ int CalcGameVars()
 
 	if(!Network) {
 
-		if((bil.angle>=75 && bil.angle<=105) || (bil.angle>=255 && bil.angle<= 285)) {
-			tmpbilx=bil.y;  // Kompensera lite för att bilen är olika lång och bred....
-			tmpbily=bil.x;	// Detta fungerade inte så bra till väggarna, men jag tror det gör underverk för gubbarna...
-		} else {
-			tmpbilx=bil.x;
-			tmpbily=bil.y;
-		}
-
 		for(loop1=0; loop1<nrgubbar; loop1++) {
-			if(gubbar[loop1].alive)
-				if(bil.posx+tmpx+tmpbilx/2>=gubbar[loop1].posx+gubbar[loop1].tmpx-(gubbar[loop1].x/2) && bil.posx+tmpx-tmpbilx/2<=gubbar[loop1].posx+gubbar[loop1].tmpx+(gubbar[loop1].x/2))
-					if(bil.posy+tmpy+tmpbily/2>=gubbar[loop1].posy+gubbar[loop1].tmpy-(gubbar[loop1].y/2) && bil.posy+tmpy-tmpbily/2<=gubbar[loop1].posy+gubbar[loop1].tmpy+(gubbar[loop1].y/2)) {
-						if(bil.curspeed>0.4f || bil.curspeed<-0.4f) {
-							gubbar[loop1].alive=false;		 // Här ska man väl även få poäng, antar jag...
+			if (!gubbar[loop1].alive)
+				continue;
 
-							struct timeval tv;
-							gettimeofday(&tv, NULL);
-							if(tv.tv_usec % 2)
-								sound_play(aj0);
-							else
-								sound_play(aj1);
-							player.runovers++;
-							/*} else if(bil.curspeed<1.0f && bil.curspeed>-1.0f) { // det ska vara så att man skjuter dem framför om man kör på dem för sakta...
-							  gubbar[loop1].tmpx=tmpx;
-							  gubbar[loop1].tmpy=tmpy; */
-					} else {
-						//gubbar[loop1].angle=-gubbar[loop1].angle;
-						gubbar[loop1].angle+=180;
-						sound_play(move);
-					}
-					}
+			if (object_colliding(&gubbar[loop1].o, &bil.o)) {
+				if(bil.o.speed>0.4f || bil.o.speed<-0.4f) {
+					gubbar[loop1].alive=false;
+
+					struct timeval tv;
+					gettimeofday(&tv, NULL);
+					if(tv.tv_usec % 2)
+						sound_play(aj0);
+					else
+						sound_play(aj1);
+					player.runovers++;
+				} else {
+					gubbar[loop1].o.angle+=180;
+					sound_play(move);
+				}
+			}
 
 		}
 
@@ -1095,34 +1010,28 @@ int CalcGameVars()
 
 		// Oj, oj, oj... precis när jag trodde att jag nått CPU toppen för en liten funktion...
                 int loop2, loop3;
-		for(loop3=0 ;loop3<nrgubbar; loop3++)
-			for(loop1=0 ;loop1<world.nrcubex;loop1++)
-				for(loop2=0;loop2<world.nrcubey;loop2++) {
-					if(map_cube(world, loop1, loop2).z!=0.0f) {		// Om inte kuben är ett underlag...
+		for (loop3=0 ;loop3<nrgubbar; loop3++) {
+			for (loop1=0 ;loop1<world.nrcubex;loop1++) {
+				for (loop2=0;loop2<world.nrcubey;loop2++) {
+					if (!gubbar[loop1].alive)
+						continue;
 
-						if(gubbar[loop3].posx+gubbar[loop3].tmpx+gubbar[loop3].x/2>=CalcMapPlace(loop1,loop2,0)-bsize && gubbar[loop3].posx+gubbar[loop3].tmpx-gubbar[loop3].x/2<=CalcMapPlace(loop1,loop2,0)+bsize)
-							if(gubbar[loop3].posy+gubbar[loop3].tmpy+gubbar[loop3].y/2>=CalcMapPlace(loop1,loop2,1)-bsize && gubbar[loop3].posy+gubbar[loop3].tmpy-gubbar[loop3].y/2<=CalcMapPlace(loop1,loop2,1)+bsize) {
-
-								gubbar[loop3].tmpx=0.0f; gubbar[loop3].tmpy=0.0f;
-								// Einar...
-								//	gubbar[loop3].angle=-gubbar[loop3].angle;
-								gubbar[loop3].curspeed=-gubbar[loop3].curspeed;
-								gubbar[loop3].angle+=60;
-							}
-
-
-
+					if (object_colliding(&(map_cube(world, loop1, loop2).o), &gubbar[loop3].o)) {
+						object_backward(&gubbar[loop3].o);
+						gubbar[loop3].o.angle+=60;
 					}
 				}
+			}
+		}
 	} // !Network
 	/* -----------------------------------------------------------------*/
 
-	bil.posx+=tmpx;
-	bil.posy+=tmpy;
+	bil.o.x+=tmpx;
+	bil.o.y+=tmpy;
 
 	if(Network) {
-		mbil.posx+=mtmpx;
-		mbil.posy+=mtmpy;
+		mbil.o.x+=mtmpx;
+		mbil.o.y+=mtmpy;
 	}
 
 
@@ -1134,15 +1043,8 @@ int CalcGameVars()
 
 	}
 
-	if(!Network)
-		for(loop1=0;loop1<nrgubbar;loop1++) {
-			gubbar[loop1].posx+=gubbar[loop1].tmpx;
-			gubbar[loop1].posy+=gubbar[loop1].tmpy;
-		}
-
-
 	// Få kameran att höjas och sänkas beroende på hastigheten...
-	tmpSpeedVar=bil.curspeed*5;
+	tmpSpeedVar=bil.o.speed*5;
 	if(tmpSpeedVar>0)
 		tmpSpeedVar=-tmpSpeedVar;
 
@@ -1153,8 +1055,8 @@ int CalcGameVars()
 		SpeedVar-=0.4f;
 
 
-	transx=-bil.posx;
-	transy=-bil.posy;
+	transx=-bil.o.x;
+	transy=-bil.o.y;
 
 
 	// Debugging grejjer!
@@ -1208,7 +1110,7 @@ int DrawGLScene()
 
 			lp1bstmp=(float)loop1*(bsize*2);
 			lp2bstmp=(float)loop2*(bsize*2);
-			ztmp=map_cube(world, loop1, loop2).z*(bsize*2);
+			ztmp=map_cube(world, loop1, loop2).o.z;
 
 			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, loop1, loop2).texturenr]);
