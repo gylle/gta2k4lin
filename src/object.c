@@ -88,7 +88,7 @@ int object_colliding(struct object *o1, struct object *o2) {
 			return 0;
 	}
 
-	/* Do all the z checking we do, not within 1 unit => no collision! */
+	/* Do all the z checking we do */
 	if (!__interval_test(o1, o2, __max(o1->size_z, o2->size_z) / 2 - 1, z))
 		return 0;
 
