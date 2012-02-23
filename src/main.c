@@ -1013,7 +1013,7 @@ int CalcGameVars()
 		for (loop3=0 ;loop3<nrgubbar; loop3++) {
 			for (loop1=0 ;loop1<world.nrcubex;loop1++) {
 				for (loop2=0;loop2<world.nrcubey;loop2++) {
-					if (!gubbar[loop1].alive)
+					if (!gubbar[loop3].alive)
 						continue;
 
 					if (object_colliding(&(map_cube(world, loop1, loop2).o), &gubbar[loop3].o)) {
