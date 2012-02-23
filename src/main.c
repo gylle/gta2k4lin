@@ -133,6 +133,34 @@ struct car {
 	struct object o;
 };
 
+struct camera {
+    GLfloat x, y, z;
+    GLfloat SpeedVar;
+};
+
+struct camera camera;
+
+static void camera_init() {
+    camera.x = 0.0f;
+    camera.y = 0.0f;
+    camera.z = -30.0f;
+}
+
+static void camera_move_for_car(struct car *car) {
+    camera.x = car->o.x;
+    camera.y = car->o.y;
+
+    // Få kameran att höjas och sänkas beroende på hastigheten...
+    GLfloat tmpSpeedVar=car->o.speed*5;
+    if(tmpSpeedVar>0)
+        tmpSpeedVar=-tmpSpeedVar;
+
+    if(tmpSpeedVar>camera.SpeedVar)
+        camera.SpeedVar+=0.4f;
+
+    if(tmpSpeedVar<camera.SpeedVar)
+        camera.SpeedVar-=0.4f;
+}
 
 struct gubbe {
 	// Texturer. ltexture2=huvudet. ltexture=resten. dtexturer=texture då gubben dött...
@@ -262,7 +290,7 @@ static void gubbe_render(struct gubbe *g) {
     glPushMatrix();
 
     // HAHA!!! Det gick till slut! :)
-    glTranslatef(g->o.x,g->o.y,0);//Distance+SpeedVar);
+    glTranslatef(g->o.x,g->o.y,0);
     glRotatef((float)g->o.angle,0.0f,0.0f,1.0f);
 
     if(g->alive) {
@@ -429,10 +457,6 @@ static void car_render(struct car *bil) {
     glPopMatrix();
 }
 
-/* Kamera */
-GLfloat transx=0.0f, transy=0.0f;
-GLfloat Distance=-30.0f, SpeedVar, tmpSpeedVar;
-
 static int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 {
 
@@ -584,6 +608,7 @@ static int LoadLevel()
 
 static int LoadCars()   // och gubbar.
 {
+	camera_init(&camera);
 
 	init_car(&bil);
 
@@ -740,23 +765,23 @@ static int RespondToKeys()
 	// Detta är debug grejjer/saker som inte ska vara kvar i "riktiga" versionen...
 	// Styr kameran
 	if(keys[SDLK_F5]) {
-		Distance-=0.5f;
+		camera.z-=0.5f;
 	}
 	if(keys[SDLK_F6]) {
-		Distance+=0.5f;
+		camera.z+=0.5f;
 	}
 
 	if(keys[SDLK_F8]) {
-		transx+=0.9f;
+		camera.x+=0.9f;
 	}
 	if(keys[SDLK_F7]) {
-		transx-=0.9f;
+		camera.x-=0.9f;
 	}
 	if(keys[SDLK_F3]) {
-		transy+=0.9f;
+		camera.y+=0.9f;
 	}
 	if(keys[SDLK_F4]) {
-		transy-=0.9f;
+		camera.y-=0.9f;
 	}
 
 	if(keys[SDLK_F9])
@@ -967,21 +992,7 @@ static int CalcGameVars()
 	bil.o.x+=tmpx;
 	bil.o.y+=tmpy;
 
-	// Få kameran att höjas och sänkas beroende på hastigheten...
-	tmpSpeedVar=bil.o.speed*5;
-	if(tmpSpeedVar>0)
-		tmpSpeedVar=-tmpSpeedVar;
-
-	if(tmpSpeedVar>SpeedVar)
-		SpeedVar+=0.4f;
-
-	if(tmpSpeedVar<SpeedVar)
-		SpeedVar-=0.4f;
-
-
-	transx=-bil.o.x;
-	transy=-bil.o.y;
-
+        camera_move_for_car(&bil);
 
 	// Debugging grejjer!
 
@@ -1005,9 +1016,9 @@ static int DrawGLScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-	/* Set camera position */
+	/* Set camera position (by translating the world in the opposite direction */
 	glLoadIdentity();
-	glTranslatef(transx,transy,Distance+SpeedVar);
+	glTranslatef(-camera.x,-camera.y,camera.z+camera.SpeedVar);
 
 	// Spelplanen
 	// Hmm, nu ska vi rita upp spelplanen... sen ska den optimeras så den bara ritar upp det nödvändiga...
