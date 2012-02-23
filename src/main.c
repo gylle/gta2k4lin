@@ -86,7 +86,6 @@ bool NoBlend=true;
 
 // Enable:as bara ifall man ska försöka få igång nätverket...
 bool Network=false;			// Nätverk eller singelplayer...
-bool Server=false;			// Om Server, annars klient.
 
 char *server_addr = NULL;
 unsigned server_port = 9378;
@@ -94,7 +93,6 @@ char *nick = NULL;
 int proto_only = 0;
 
 
-int broms_in_progress = 0;
 
 // Skaffa FPS räknare... hur ska man gööra?
 
@@ -183,8 +181,6 @@ struct world world;
 
 
 struct car bil;
-struct car mbil;		 // andra bilen i multiplayer
-
 
 static void init_gubbe(struct gubbe *g) {
     g->alive=true;
@@ -353,7 +349,7 @@ static void init_gubbe_displaylist() {
     glEndList();
 }
 
-void init_car(struct car *bil) {
+static void init_car(struct car *bil) {
     // Ladda en standard bil...
 
     bil->o.size_x=3;
@@ -389,7 +385,7 @@ void init_car(struct car *bil) {
 
 }
 
-void car_render(struct car *bil) {
+static void car_render(struct car *bil) {
     glPushMatrix();
 
     glTranslatef(bil->o.x, bil->o.y, bil->o.z);
@@ -437,24 +433,7 @@ void car_render(struct car *bil) {
 GLfloat transx=0.0f, transy=0.0f;
 GLfloat Distance=-30.0f, SpeedVar, tmpSpeedVar;
 
-float CalcMapPlace(int cx,int cy,bool xy)
-{
-
-	// bool xy: FALSE= returnera x. TRUE= returnera y
-
-	float Answer;
-
-	if(!xy) {
-		Answer=(float)cx*bsize*2;
-	} else {
-		Answer=(float)cy*bsize*2;
-
-	}
-	return Answer;
-}
-
-
-int LoadGLTextures()								// Load Bitmaps And Convert To Textures
+static int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 {
 
 	/* Load textures from file names in world */
@@ -513,26 +492,7 @@ int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 	return 1;							// Return The Status
 }
 
-void ReSizeGLScene(GLsizei width, GLsizei height)		// Resize And Initialize The GL Window
-{
-	if (height==0)										// Prevent A Divide By Zero By
-	{
-		height=1;										// Making Height Equal One
-	}
-
-	glViewport(0,0,width,height);						// Reset The Current Viewport
-
-	glMatrixMode(GL_PROJECTION);						// Select The Projection Matrix
-	glLoadIdentity();									// Reset The Projection Matrix
-
-	// Calculate The Aspect Ratio Of The Window
-	gluPerspective(45.0f,(GLfloat)width/(GLfloat)height,0.1f,100.0f);
-
-	glMatrixMode(GL_MODELVIEW);							// Select The Modelview Matrix
-	glLoadIdentity();									// Reset The Modelview Matrix
-}
-
-int LoadLevel()
+static int LoadLevel()
 {
 
 	// Används inte, borttaget för att spara plats...
@@ -622,26 +582,10 @@ int LoadLevel()
 	return true;
 }
 
-int LoadCars()   // och gubbar.
+static int LoadCars()   // och gubbar.
 {
 
 	init_car(&bil);
-	init_car(&mbil); // "Nätverks"-bilen
-
-	if(Network) {
-		if(Server) {
-			bil.o.x=10;
-			bil.o.y=10;
-			mbil.o.x=50;
-			mbil.o.y=50;
-		} else {
-			mbil.o.x=10;
-			mbil.o.y=10;
-			bil.o.x=50;
-			bil.o.y=50;
-		}
-        }
-
 
 	// Kicka igång alla gubbar
 	gubbar = malloc(sizeof(struct gubbe)*nrgubbar);
@@ -656,13 +600,8 @@ int LoadCars()   // och gubbar.
 	return true;
 }
 
-int SetupNet()
-{
-	// Förnärvarande inget stöd för nätverk i linux versionen--
-	return 0;
-}
 
-int InitGL()								//		 All Setup For OpenGL Goes Here
+static int InitGL()								//		 All Setup For OpenGL Goes Here
 {
 
 	if (!LoadGLTextures())							// Jump To Texture Loading Routine ( NEW )
@@ -715,14 +654,14 @@ int InitGL()								//		 All Setup For OpenGL Goes Here
 	return true;										// Initialization Went OK
 }
 
-int RespondToKeys()
+static int RespondToKeys()
 {
 
 	if(bil.helhet==0) {
 		if(keys[SDLK_RETURN]) {
 			bil.helhet=100;
 			bil.t1=1;
-			mbil.Points++;
+			/* mbil.Points++; */
 
 			sound_cont_stop(brinner, 1);
 			sound_play(respawn);
@@ -745,6 +684,7 @@ int RespondToKeys()
 	}
 
 	bool brakepressed=false;
+        static int broms_in_progress = 0;
 
 	if(keys[SDLK_SPACE]) {
 		brakepressed=true;
@@ -790,7 +730,6 @@ int RespondToKeys()
 
 	if(keys[SDLK_RIGHT]) {
 		sttmp=bil.o.speed/bil.maxspeed;
-		//std::cout << "HOGER" << std::endl;
 		if(brakepressed)
 			sttmp+=0.7f;
 
@@ -856,7 +795,7 @@ int RespondToKeys()
 	return true;
 }
 
-int CalcGameVars()
+static int CalcGameVars()
 {
 
 	// Tar hand om hastigheten...
@@ -894,7 +833,6 @@ int CalcGameVars()
 	///			Styr även nätverksbilarna...						 //
 	///////////////////////////////////////////////////////////////////
 	///////////////////////////////////////////////////////////////////
-	float mtmpx=0.0f,mtmpy=0.0f;
 
 	//NÄTVERKSSAK BORTTAGEN
 
@@ -1029,20 +967,6 @@ int CalcGameVars()
 	bil.o.x+=tmpx;
 	bil.o.y+=tmpy;
 
-	if(Network) {
-		mbil.o.x+=mtmpx;
-		mbil.o.y+=mtmpy;
-	}
-
-
-
-	// Räkna ut i vilket väderstreck den andra bilen befinner sig...
-	if(Network) {
-
-		// NÄTVERKSSAK BORTTAGEN
-
-	}
-
 	// Få kameran att höjas och sänkas beroende på hastigheten...
 	tmpSpeedVar=bil.o.speed*5;
 	if(tmpSpeedVar>0)
@@ -1077,7 +1001,7 @@ int CalcGameVars()
 	return true;
 }
 
-int DrawGLScene()
+static int DrawGLScene()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
@@ -1186,23 +1110,17 @@ int DrawGLScene()
 
 }
 
-void KillGLWindow()
-{
-	SDL_Quit();
-
-}
-
-void peer_send_line(const char *nick, const char *input) {
+static void peer_send_line(const char *nick, const char *input) {
 	hud_printf("%s> %s", nick, input);
 }
 
-void input_send_line(const char *input) {
+static void input_send_line(const char *input) {
 	if (Network)
 		network_amsg_send((char*)input);
 	hud_printf("Me> %s", input);
 }
 
-void handle_input_field(SDL_keysym key, int type) {
+static void handle_input_field(SDL_keysym key, int type) {
     if(!hud_input_field_active())
         return;
 
@@ -1244,7 +1162,7 @@ void handle_input_field(SDL_keysym key, int type) {
     }
 }
 
-int CheckaEvents()
+static int CheckaEvents()
 {
 	SDL_Event event;
 
@@ -1275,7 +1193,7 @@ int CheckaEvents()
 
 }
 
-void print_help()
+static void print_help()
 {
 	fprintf(stderr, "Usage: gta2k [OPTIONS]\n\n");
 	fprintf(stderr, "Options:\n");
@@ -1290,7 +1208,7 @@ void print_help()
 	fprintf(stderr, "  -h, --help            Show this help\n");
 }
 
-int parse_options(int argc, char *argv[])
+static int parse_options(int argc, char *argv[])
 {
 	char opt;
 	int option_index = 0;
