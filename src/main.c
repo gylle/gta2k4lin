@@ -450,65 +450,50 @@ static void car_render(struct car *bil) {
         // Ovanifrån...
         glTexCoord2f(0.0f, 0.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
-
         glTexCoord2f(0.0f, 1.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 1.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 0.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
 
         /* Left */
         glTexCoord2f(0.0f, 0.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, 0.0f);
-
         glTexCoord2f(0.0f, 1.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 1.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 0.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, 0.0f);
 
         /* Right */
         glTexCoord2f(0.0f, 0.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, 0.0f);
-
         glTexCoord2f(0.0f, 1.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 1.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 0.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, 0.0f);
 
         /* Front */
         glTexCoord2f(0.0f, 0.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, 0.0f);
-
         glTexCoord2f(0.0f, 1.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 1.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 0.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, 0.0f);
 
         /* Back */
         glTexCoord2f(0.0f, 0.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, 0.0f);
-
         glTexCoord2f(0.0f, 1.0f);
         glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 1.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
-
         glTexCoord2f(1.0f, 0.0f);
         glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, 0.0f);
     glEnd();
