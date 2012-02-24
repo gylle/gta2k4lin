@@ -1136,16 +1136,16 @@ static void input_send_line(const char *input) {
 	hud_printf("Me> %s", input);
 }
 
-static void handle_input_field(SDL_keysym key, int type) {
+static int handle_input_field(SDL_keysym key, int type) {
     if(!hud_input_field_active())
-        return;
+        return 0;
 
     static const int input_max = 80;
     static char *input_field = NULL;
     static int input_length = 0;
 
     if(type == SDL_KEYUP) {
-        return;
+        return 0;
     }
 
     if(input_field == NULL) {
@@ -1188,6 +1188,8 @@ static void handle_input_field(SDL_keysym key, int type) {
             hud_update_input_field(input_field);
         }
     }
+
+    return 1; /* We handled the key, stop processing it. */
 }
 
 static void event_handle_resize(SDL_ResizeEvent *resize) {
@@ -1202,8 +1204,8 @@ static int CheckaEvents()
 	while( SDL_PollEvent( &event ) ){
 		switch( event.type ){
 		case SDL_KEYDOWN:
-			handle_input_field(event.key.keysym, SDL_KEYDOWN);
-			keys[event.key.keysym.sym]=true;
+			if(!handle_input_field(event.key.keysym, SDL_KEYDOWN))
+			    keys[event.key.keysym.sym]=true;
 			break;
 
 		case SDL_KEYUP:
