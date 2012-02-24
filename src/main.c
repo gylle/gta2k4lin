@@ -65,12 +65,12 @@
 #include "network.h"
 #include "hud.h"
 #include "object.h"
+#include "models.h"
 
 int initial_width = 640;
 int initial_height = 480;
 const int sdl_video_flags = SDL_OPENGL | SDL_RESIZABLE;
 const int sdl_bpp = 32; // Vi gillar 32 här dåva
-float bsize=5.0f;
 
 #define bool  int
 #define false 0
@@ -208,6 +208,20 @@ struct world {
 #define map_cube(world, x, y) world.map[(x) * (world).nrcubey + (y)]
 struct world world;
 
+static void draw_quads(float vertices[], int count) {
+    /* Loosely modeled upon glDrawElements & co */
+
+    glBegin(GL_QUADS);
+        int i,j;
+        for(i = 0; i < count; i++) {
+            for(j = 0; j < 4; j++) {
+                int offset = i*5*4 + j*5;
+                glTexCoord2f(vertices[offset+3], vertices[offset+4]);
+                glVertex3f(vertices[offset], vertices[offset+1], vertices[offset+2]);
+            }
+        }
+    glEnd();
+}
 
 struct car bil;
 
@@ -221,16 +235,16 @@ static void init_gubbe(struct gubbe *g) {
 
     //g->o.angle=0;
 
-    g->o.size_x=1.0f;
-    g->o.size_y=1.0f;
-    g->o.size_z=1.9f;
+    g->o.size_x=GUBBSIZE_X;
+    g->o.size_y=GUBBSIZE_Y;
+    g->o.size_z=GUBBSIZE_Z;
     object_update_circle(&(g->o));
 
-    g->o.x=(float)((rand() % world.nrcubex*bsize*2)*100)/100.0f;
-    g->o.y=(float)((rand() % world.nrcubey*bsize*2)*100)/100.0f;
+    g->o.x=(float)((rand() % world.nrcubex*BSIZE*2)*100)/100.0f;
+    g->o.y=(float)((rand() % world.nrcubey*BSIZE*2)*100)/100.0f;
     g->o.angle=rand() % 360;
 
-    g->o.z=bsize;
+    g->o.z=BSIZE;
 
     g->ltexture=11;
     g->ltexture2=13;
@@ -264,8 +278,8 @@ static void gubbe_move(struct gubbe *g) {
             g->atimer=0;
             g->alive=true;
 
-            g->o.x=(float)((rand() % world.nrcubex*bsize*2)*100)/100;
-            g->o.y=(float)((rand() % world.nrcubey*bsize*2)*100)/100;
+            g->o.x=(float)((rand() % world.nrcubex*BSIZE*2)*100)/100;
+            g->o.y=(float)((rand() % world.nrcubey*BSIZE*2)*100)/100;
             g->o.angle=rand() % 360;
         }
     }
@@ -307,18 +321,8 @@ static void gubbe_render(struct gubbe *g) {
         // Är man överkörd står man nog inte upp längre... :) Det här blir bättre...
         glBindTexture(GL_TEXTURE_2D,world.texIDs[g->dtexture]);
 
-        glBegin(GL_QUADS);
-            // Ovanifrån...
-            glTexCoord2f(0.0f, 0.0f);
-            glVertex3f(0.0f-(g->o.size_x/2),0.0f-(g->o.size_y/2),bsize);
-            glTexCoord2f(0.0f, 1.0f);
-            glVertex3f(0.0f-(g->o.size_x/2),0.0f+(g->o.size_y/2),bsize);
-            glTexCoord2f(1.0f, 1.0f);
-            glVertex3f(0.0f+(g->o.size_x/2),0.0f+(g->o.size_y/2),bsize);
-            glTexCoord2f(1.0f, 0.0f);
-            glVertex3f(0.0f+(g->o.size_x/2),0.0f-(g->o.size_y/2),bsize);
-        glEnd();
-
+        glTranslatef(0.0f, 0.0f, -GUBBSIZE_Z+0.01f);
+        draw_quads(gubbe_top_vertices, sizeof(gubbe_top_vertices)/(20*sizeof(float)));
     }
     glPopMatrix();
 }
@@ -327,90 +331,30 @@ static void init_gubbe_displaylist() {
     /* (Bygger på att den första gubben i gubbar är initialiserad */
 
     // Vi bygger en Display List!!! EJJJJ!!!(som i öj) :)
-
-    float gubbextent_x = gubbar[0].o.size_x/2;
-    float gubbextent_y = gubbar[0].o.size_y/2;
-    float gubbsize_z = gubbar[0].o.size_z;
-
     GubbeDispList=glGenLists(1);
 
     glNewList(GubbeDispList,GL_COMPILE);
+        glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture2]);
+        draw_quads(gubbe_top_vertices, sizeof(gubbe_top_vertices)/(20*sizeof(float)));
 
-    glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture2]);
-
-    glBegin(GL_QUADS);
-        // Ovanifrån...
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
-    glEnd();
-
-    // Börja en ny glBegin för att vi ska kunna texturemappa huvudet och resten seperat...
-    glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture]);
-
-    glBegin(GL_QUADS);
-        /* Left */
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z);
-
-        /* Right */
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z);
-
-        /* Front */
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z);
-
-        /* Back */
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z);
-    glEnd();
-
+        glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture]);
+        draw_quads(gubbe_body_vertices, sizeof(gubbe_body_vertices)/(20*sizeof(float)));
     glEndList();
 }
 
 static void init_car(struct car *bil) {
     // Ladda en standard bil...
 
-    bil->o.size_x=3;
-    bil->o.size_y=5;
-    bil->o.size_z=2;
+    bil->o.size_x=CARSIZE_X;
+    bil->o.size_y=CARSIZE_Y;
+    bil->o.size_z=CARSIZE_Z;
     object_update_circle(&(bil->o));
 
     bil->helhet=100;
 
     bil->o.x=10;
     bil->o.y=10;
-    bil->o.z=bsize; // Ska nog inte initialiseras här..
+    bil->o.z=BSIZE; // Ska nog inte initialiseras här..
 
     bil->t1=1;
     bil->t2=1;
@@ -441,62 +385,7 @@ static void car_render(struct car *bil) {
     glRotatef((float)bil->o.angle,0.0f,0.0f,1.0f);
 
     glBindTexture(GL_TEXTURE_2D,world.texIDs[bil->t1]);
-
-    float bilextent_x = bil->o.size_x/2;
-    float bilextent_y = bil->o.size_y/2;
-    float bilsize_z = bil->o.size_z;
-
-    glBegin(GL_QUADS);
-        // Ovanifrån...
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
-
-        /* Left */
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, 0.0f);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, 0.0f);
-
-        /* Right */
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, 0.0f);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, 0.0f);
-
-        /* Front */
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, 0.0f);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, 0.0f);
-
-        /* Back */
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, 0.0f);
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, 0.0f);
-    glEnd();
+    draw_quads(car_vertices, sizeof(car_vertices)/(20*sizeof(float)));
 
     glPopMatrix();
 }
@@ -579,21 +468,21 @@ static int LoadLevel()
 
 	for(loop1=0;loop1<world.nrcubex;loop1++)
 		for(loop2=0;loop2<world.nrcubey;loop2++) {
-			map_cube(world, loop1, loop2).o.size_x=bsize * 2;
-			map_cube(world, loop1, loop2).o.size_y=bsize * 2;
-			map_cube(world, loop1, loop2).o.size_z=bsize * 2;
-			map_cube(world, loop1, loop2).o.x=loop1 * bsize * 2;
-			map_cube(world, loop1, loop2).o.y=loop2 * bsize * 2;
+			map_cube(world, loop1, loop2).o.size_x=BSIZE * 2;
+			map_cube(world, loop1, loop2).o.size_y=BSIZE * 2;
+			map_cube(world, loop1, loop2).o.size_z=BSIZE * 2;
+			map_cube(world, loop1, loop2).o.x=loop1 * BSIZE * 2;
+			map_cube(world, loop1, loop2).o.y=loop2 * BSIZE * 2;
 			map_cube(world, loop1, loop2).o.z=0.0f;
 			map_cube(world, loop1, loop2).texturenr=0;
 			map_cube(world, loop1, loop2).beskrivning="Testbeskrivning";
 			object_update_circle(&(map_cube(world, loop1, loop2).o));
 		}
 
-	map_cube(world, 0, 0).o.z = bsize * 2;
+	map_cube(world, 0, 0).o.z = BSIZE * 2;
 	map_cube(world, 0, 0).texturenr=1;
 
-	map_cube(world, 0, 1).o.z = bsize * 2;
+	map_cube(world, 0, 1).o.z = BSIZE * 2;
 	map_cube(world, 0, 1).texturenr=1;
 
 	// Vägen -------------------------------
@@ -617,27 +506,27 @@ static int LoadLevel()
 	// "Väggen" runtomkring
 	for(loop1=0;loop1<world.nrcubey;loop1++) {
 		map_cube(world, 0, loop1).texturenr=4;
-		map_cube(world, 0, loop1).o.z = bsize * 2;
+		map_cube(world, 0, loop1).o.z = BSIZE * 2;
 	}
 
 	for(loop1=0;loop1<world.nrcubey;loop1++) {
 		map_cube(world, world.nrcubex-1, loop1).texturenr=4;
-		map_cube(world, world.nrcubex-1, loop1).o.z = bsize * 2;
+		map_cube(world, world.nrcubex-1, loop1).o.z = BSIZE * 2;
 	}
 
 	for(loop1=0;loop1<world.nrcubex;loop1++) {
 		map_cube(world, loop1, 0).texturenr=4;
-		map_cube(world, loop1, 0).o.z = bsize * 2;
+		map_cube(world, loop1, 0).o.z = BSIZE * 2;
 	}
 	for(loop1=0;loop1<world.nrcubex;loop1++) {
 		map_cube(world, loop1, world.nrcubey-1).texturenr=4;
-		map_cube(world, loop1, world.nrcubey-1).o.z = bsize * 2;
+		map_cube(world, loop1, world.nrcubey-1).o.z = BSIZE * 2;
 	}
 
 	// Vi lägger in lite buskar
 	for(loop1=1;loop1<(world.nrcubey/2-1);loop1+=2) {
 		map_cube(world, world.nrcubex/2, loop1).texturenr=15;
-		map_cube(world, world.nrcubex/2, loop1).o.z = bsize * 2;
+		map_cube(world, world.nrcubex/2, loop1).o.z = BSIZE * 2;
 	}
 
 	// Vägen in till mitten och den fina credits saken där.
@@ -645,7 +534,7 @@ static int LoadLevel()
 		map_cube(world, loop1, world.nrcubey/2).texturenr=7;
 
 	map_cube(world, world.nrcubex/2, world.nrcubey/2).texturenr=10;
-	map_cube(world, world.nrcubex/2, world.nrcubey/2).o.z = bsize * 2 * 2;
+	map_cube(world, world.nrcubex/2, world.nrcubey/2).o.z = BSIZE * 2 * 2;
 
 	return true;
 }
@@ -1091,76 +980,19 @@ static int DrawGLScene()
 		for(loop2=0; loop2<world.nrcubey; loop2++) {
 
 
-			lp1bstmp=(float)loop1*(bsize*2);
-			lp2bstmp=(float)loop2*(bsize*2);
+			lp1bstmp=(float)loop1*(BSIZE*2);
+			lp2bstmp=(float)loop2*(BSIZE*2);
 			ztmp=map_cube(world, loop1, loop2).o.z;
+
+                        glPushMatrix();
+                        glTranslatef(lp1bstmp, lp2bstmp, ztmp);
 
 			glEnable(GL_TEXTURE_2D);
 			glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, loop1, loop2).texturenr]);
 
-			glBegin(GL_QUADS);
-                            /* Bottom */
-			    glTexCoord2f(0.0f, 0.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
-                            glTexCoord2f(0.0f, 1.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
-                            glTexCoord2f(1.0f, 1.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
-                            glTexCoord2f(1.0f, 0.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
+                        draw_quads(map_cube_vertices, sizeof(map_cube_vertices)/(20*sizeof(float)));
 
-                            /* Top */
-                            glTexCoord2f(0.0f, 0.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
-                            glTexCoord2f(0.0f, 1.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 1.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 0.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
-
-                            /* Left */
-                            glTexCoord2f(0.0f, 0.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
-                            glTexCoord2f(0.0f, 1.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 1.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 0.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
-
-                            /* Right */
-                            glTexCoord2f(0.0f, 0.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
-                            glTexCoord2f(0.0f, 1.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 1.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 0.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
-
-                            /* Front */
-                            glTexCoord2f(0.0f, 0.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
-                            glTexCoord2f(0.0f, 1.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 1.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 0.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
-
-                            /* Back */
-                            glTexCoord2f(0.0f, 0.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
-                            glTexCoord2f(0.0f, 1.0f);
-                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 1.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
-                            glTexCoord2f(1.0f, 0.0f);
-                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
-
-			glEnd();
-
+                        glPopMatrix();
 		}
 	}
 
