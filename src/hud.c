@@ -305,6 +305,8 @@ void hud_set_score(int new_score) {
 
 void hud_show_input_field(int onoff) {
     hud_data->show_input_field = onoff;
+    if(onoff && hud_data->input_surface == NULL)
+        hud_update_input_field("");
 }
 
 int hud_input_field_active() {

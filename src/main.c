@@ -1144,7 +1144,7 @@ static void handle_input_field(SDL_keysym key, int type) {
     static char *input_field = NULL;
     static int input_length = 0;
 
-    if(type == SDL_KEYDOWN) {
+    if(type == SDL_KEYUP) {
         return;
     }
 
@@ -1161,17 +1161,29 @@ static void handle_input_field(SDL_keysym key, int type) {
     } else if(key.sym == SDLK_BACKSPACE && input_length > 0) {
         input_field[--input_length] = '\0';
         hud_update_input_field(input_field);
-    } else if(key.sym == SDLK_RETURN && input_length > 0) {
-        input_send_line(input_field);
+    } else if(key.sym == SDLK_RETURN) {
+        if(input_length > 0)
+            input_send_line(input_field);
+
         free(input_field);
         input_field = NULL;
         hud_update_input_field("");
         hud_show_input_field(0);
     } else if(input_length < input_max) {
-        if((key.sym >= 'a' && key.sym <= 'z') ||
-           (key.sym >= '0' && key.sym <= '9') ||
-            key.sym == ' ') {
-            input_field[input_length++] = key.sym;
+        /* TODO: We should just go UTF-8, I guess. */
+
+        char c = 0;
+        if((key.sym >= 'a' && key.sym <= 'z')) {
+            c = key.sym;
+            if(key.mod & KMOD_SHIFT)
+                c -= 'a' - 'A';
+        } else if((key.sym >= 0x20 && key.sym <= 0x7e) ||
+                  (key.sym >= 0xc0 && key.sym <= 0xff)) {
+                  c = key.sym;
+        }
+
+        if(c != 0) {
+            input_field[input_length++] = c;
             input_field[input_length] = '\0';
             hud_update_input_field(input_field);
         }
