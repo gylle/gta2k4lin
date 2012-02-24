@@ -308,13 +308,15 @@ static void gubbe_render(struct gubbe *g) {
         glBindTexture(GL_TEXTURE_2D,world.texIDs[g->dtexture]);
 
         glBegin(GL_QUADS);
-
-        // Ovanifrån...
-
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(g->o.size_x/2),0.0f+(g->o.size_y/2),bsize);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(g->o.size_x/2),0.0f+(g->o.size_y/2),bsize);// -----------X
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(g->o.size_x/2),0.0f-(g->o.size_y/2),bsize);// -----------X
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(g->o.size_x/2),0.0f-(g->o.size_y/2),bsize);// X-----------
+            // Ovanifrån...
+            glTexCoord2f(0.0f, 0.0f);
+            glVertex3f(0.0f-(g->o.size_x/2),0.0f-(g->o.size_y/2),bsize);
+            glTexCoord2f(0.0f, 1.0f);
+            glVertex3f(0.0f-(g->o.size_x/2),0.0f+(g->o.size_y/2),bsize);
+            glTexCoord2f(1.0f, 1.0f);
+            glVertex3f(0.0f+(g->o.size_x/2),0.0f+(g->o.size_y/2),bsize);
+            glTexCoord2f(1.0f, 0.0f);
+            glVertex3f(0.0f+(g->o.size_x/2),0.0f-(g->o.size_y/2),bsize);
         glEnd();
 
     }
@@ -326,6 +328,10 @@ static void init_gubbe_displaylist() {
 
     // Vi bygger en Display List!!! EJJJJ!!!(som i öj) :)
 
+    float gubbextent_x = gubbar[0].o.size_x/2;
+    float gubbextent_y = gubbar[0].o.size_y/2;
+    float gubbsize_z = gubbar[0].o.size_z;
+
     GubbeDispList=glGenLists(1);
 
     glNewList(GubbeDispList,GL_COMPILE);
@@ -333,46 +339,60 @@ static void init_gubbe_displaylist() {
     glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture2]);
 
     glBegin(GL_QUADS);
-
-    // Ovanifrån...
-
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// -----------X
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// -----------X
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
+        // Ovanifrån...
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
     glEnd();
 
     // Börja en ny glBegin för att vi ska kunna texturemappa huvudet och resten seperat...
     glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture]);
 
     glBegin(GL_QUADS);
+        /* Left */
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z);
 
-    //Höger och vänster
+        /* Right */
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z);
 
+        /* Front */
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f-gubbextent_y, gubbar[0].o.z);
 
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.z);// X-----------
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.z);// X-----------
-
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.z);
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.z);
-
-    // bak och fram
-
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// -----------X
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.z);// -----------X
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f+(gubbar[0].o.size_y/2),gubbar[0].o.z);// X-----------
-
-    glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// X-----------
-    glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.size_z+gubbar[0].o.z);// -----------X
-    glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.z);// -----------X
-    glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(gubbar[0].o.size_x/2),0.0f-(gubbar[0].o.size_y/2),gubbar[0].o.z);// X-----------
-
-
+        /* Back */
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z);
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f+gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z+gubbsize_z);
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f-gubbextent_x, 0.0f+gubbextent_y, gubbar[0].o.z);
     glEnd();
 
     glEndList();
@@ -422,37 +442,75 @@ static void car_render(struct car *bil) {
 
     glBindTexture(GL_TEXTURE_2D,world.texIDs[bil->t1]);
 
+    float bilextent_x = bil->o.size_x/2;
+    float bilextent_y = bil->o.size_y/2;
+    float bilsize_z = bil->o.size_z;
+
     glBegin(GL_QUADS);
+        // Ovanifrån...
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
 
-        // Tak...
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// -----------X
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// -----------X
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// X-----------
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
 
-        // Inget golv, för det kommer inte att synas... tror jag.
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
 
-        //Höger och vänster
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// X-----------
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),0.0f);// X-----------
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),0.0f);// X-----------
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
 
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),0.0f);
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),0.0f);
+        /* Left */
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, 0.0f);
 
-        // bak och fram
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),bil->o.size_z);// -----------X
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f+(bil->o.size_y/2),0.0f);// -----------X
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f+(bil->o.size_y/2),0.0f);// X-----------
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
 
-        glTexCoord2f(0.0f, 0.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// X-----------
-        glTexCoord2f(1.0f, 0.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),bil->o.size_z);// -----------X
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(0.0f+(bil->o.size_x/2),0.0f-(bil->o.size_y/2),0.0f);// -----------X
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(0.0f-(bil->o.size_x/2),0.0f-(bil->o.size_y/2),0.0f);// X-----------
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
+
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, 0.0f);
+
+        /* Right */
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, 0.0f);
+
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
+
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
+
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, 0.0f);
+
+        /* Front */
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, 0.0f);
+
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f-bilextent_y, bilsize_z);
+
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, bilsize_z);
+
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f-bilextent_y, 0.0f);
+
+        /* Back */
+        glTexCoord2f(0.0f, 0.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, 0.0f);
+
+        glTexCoord2f(0.0f, 1.0f);
+        glVertex3f(0.0f+bilextent_x, 0.0f+bilextent_y, bilsize_z);
+
+        glTexCoord2f(1.0f, 1.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, bilsize_z);
+
+        glTexCoord2f(1.0f, 0.0f);
+        glVertex3f(0.0f-bilextent_x, 0.0f+bilextent_y, 0.0f);
     glEnd();
 
     glPopMatrix();
@@ -664,9 +722,9 @@ static int InitGL(int width, int height) //		 All Setup For OpenGL Goes Here
 	glShadeModel( GL_SMOOTH );
 
 	/* Culling. */
-	//glCullFace( GL_BACK );
-	//glFrontFace( GL_CCW );
-	//glEnable( GL_CULL_FACE );
+	glFrontFace( GL_CW );
+	glCullFace( GL_BACK );
+	glEnable( GL_CULL_FACE );
 
 	/* Set the clear color. */
 	glClearColor( 0, 0, 1, 0 );
@@ -1056,38 +1114,65 @@ static int DrawGLScene()
 			glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, loop1, loop2).texturenr]);
 
 			glBegin(GL_QUADS);
-			glTexCoord2f(0.0f, 0.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 0.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 1.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
-			glTexCoord2f(0.0f, 1.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
+                            /* Bottom */
+			    glTexCoord2f(0.0f, 0.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
+                            glTexCoord2f(0.0f, 1.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
+                            glTexCoord2f(1.0f, 1.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
+                            glTexCoord2f(1.0f, 0.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
 
-			glTexCoord2f(0.0f, 0.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 0.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 1.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
-			glTexCoord2f(0.0f, 1.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
+                            /* Top */
+                            glTexCoord2f(0.0f, 0.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
+                            glTexCoord2f(0.0f, 1.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 1.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 0.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
 
-			glTexCoord2f(0.0f, 0.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
-			glTexCoord2f(1.0f, 0.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
-			glTexCoord2f(1.0f, 1.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
-			glTexCoord2f(0.0f, 1.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
+                            /* Left */
+                            glTexCoord2f(0.0f, 0.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
+                            glTexCoord2f(0.0f, 1.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 1.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 0.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
 
+                            /* Right */
+                            glTexCoord2f(0.0f, 0.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
+                            glTexCoord2f(0.0f, 1.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 1.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 0.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
 
-			// Vänster sida.
-			glTexCoord2f(0.0f, 0.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 0.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 1.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
-			glTexCoord2f(0.0f, 1.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
+                            /* Front */
+                            glTexCoord2f(0.0f, 0.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
+                            glTexCoord2f(0.0f, 1.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 1.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 0.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
 
-
-			glTexCoord2f(0.0f, 0.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 0.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 1.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
-			glTexCoord2f(0.0f, 1.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
-
-			glTexCoord2f(0.0f, 0.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 0.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp-bsize);
-			glTexCoord2f(1.0f, 1.0f); glVertex3f(lp1bstmp+bsize,lp2bstmp-bsize,ztmp+bsize);
-			glTexCoord2f(0.0f, 1.0f); glVertex3f(lp1bstmp-bsize,lp2bstmp-bsize,ztmp+bsize);
+                            /* Back */
+                            glTexCoord2f(0.0f, 0.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp-bsize);
+                            glTexCoord2f(0.0f, 1.0f);
+                            glVertex3f(lp1bstmp+bsize,lp2bstmp+bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 1.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp+bsize);
+                            glTexCoord2f(1.0f, 0.0f);
+                            glVertex3f(lp1bstmp-bsize,lp2bstmp+bsize,ztmp-bsize);
 
 			glEnd();
 
