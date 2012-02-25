@@ -244,7 +244,7 @@ static void init_gubbe(struct gubbe *g) {
     g->o.y=(float)((rand() % world.nrcubey*BSIZE*2)*100)/100.0f;
     g->o.angle=rand() % 360;
 
-    g->o.z=BSIZE;
+    g->o.z=BSIZE + GUBBSIZE_Z / 2;
 
     g->ltexture=11;
     g->ltexture2=13;
@@ -354,7 +354,7 @@ static void init_car(struct car *bil) {
 
     bil->o.x=10;
     bil->o.y=10;
-    bil->o.z=BSIZE; // Ska nog inte initialiseras här..
+    bil->o.z=BSIZE + CARSIZE_Z / 2; // Ska nog inte initialiseras här..
 
     bil->t1=1;
     bil->t2=1;
@@ -479,7 +479,7 @@ static int LoadLevel()
 			object_update_circle(&(map_cube(world, loop1, loop2).o));
 		}
 
-	map_cube(world, 0, 0).o.z = BSIZE * 2;
+	map_cube(world, 0, 0).o.z = BSIZE;
 	map_cube(world, 0, 0).texturenr=1;
 
 	map_cube(world, 0, 1).o.z = BSIZE * 2;
@@ -851,6 +851,7 @@ static int CalcGameVars()
 				}
 				object_backward(&bil.o);
 				bil.o.speed = 0;
+				loop1=world.nrcubex; loop2=world.nrcubey; // XXX: ugly exit
 			}
 		}
 	}
@@ -891,6 +892,7 @@ static int CalcGameVars()
 						sound_play(aj1);
 					player.runovers++;
 				} else {
+					object_backward(&(gubbar[loop1].o));
 					gubbar[loop1].o.angle+=180;
 					sound_play(move);
 				}
