@@ -23,6 +23,8 @@
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
+#define __STDC_IEC_559__
+
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -65,15 +67,15 @@ pthread_t thread;
 
 int socktransferunit; /* damp */
 
-struct opponent {
+struct player {
 	unsigned long id;
 	int used;
 	char *nick;
 	struct object o;
 };
 
-struct opponent opponents[NETWORK_MAX_OPPONENTS];
-pthread_mutex_t opponents_mutex = PTHREAD_MUTEX_INITIALIZER;
+struct player players[NETWORK_MAX_OPPONENTS];
+pthread_mutex_t players_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct timeval last_position_update;
 
@@ -82,23 +84,67 @@ extern int errno;
 int sock;
 
 struct proto_move_send {
-	float x, y, z;
+	union {
+		float x;
+		uint32_t xi;
+	};
+	union {
+		float y;
+		uint32_t yi;
+	};
+	union {
+		float z;
+		uint32_t zi;
+	};
 	int angle;
 } __attribute__((packed));
 
 struct proto_resize_send {
-	float x, y, z;
+	union {
+		float x;
+		uint32_t xi;
+	};
+	union {
+		float y;
+		uint32_t yi;
+	};
+	union {
+		float z;
+		uint32_t zi;
+	};
 } __attribute__((packed));
 
 struct proto_move_recv {
 	uint32_t id;
-	float x, y, z;
+	union {
+		float x;
+		uint32_t xi;
+	};
+	union {
+		float y;
+		uint32_t yi;
+	};
+	union {
+		float z;
+		uint32_t zi;
+	};
 	int angle;
 } __attribute__((packed));
 
 struct proto_resize_recv {
 	uint32_t id;
-	float x, y, z;
+	union {
+		float x;
+		uint32_t xi;
+	};
+	union {
+		float y;
+		uint32_t yi;
+	};
+	union {
+		float z;
+		uint32_t zi;
+	};
 } __attribute__((packed));
 
 int network_amsg_send(char *msg) {
@@ -113,28 +159,62 @@ int network_amsg_recv(char *msg, unsigned long *id, unsigned size) {
 		lmq_recv(&amsg_outgress, id, sizeof(unsigned long), NULL);
 }
 
+static void move_player(struct proto_move_recv *pmove) {
+	int i;
+	uint32_t id = htonl(pmove->id);
+
+	pthread_mutex_lock(&players_mutex);
+	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
+		if (players[i].id == id) {
+			players[i].o.xi = htonl(pmove->xi);
+			players[i].o.yi = htonl(pmove->yi);
+			players[i].o.zi = htonl(pmove->zi);
+			players[i].o.angle = htons(pmove->angle);
+			break;
+		}
+	}
+	pthread_mutex_unlock(&players_mutex);
+}
+
+static void resize_player(struct proto_resize_recv *psize) {
+	int i;
+	uint32_t id = htonl(psize->id);
+
+	pthread_mutex_lock(&players_mutex);
+	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
+		if (players[i].id == id) {
+			players[i].o.size_xi = htonl(psize->xi);
+			players[i].o.size_yi = htonl(psize->yi);
+			players[i].o.size_zi = htonl(psize->zi);
+			break;
+		}
+	}
+	pthread_mutex_unlock(&players_mutex);
+}
+
 static int register_id(unsigned long id, char *nick) {
 	int ret = -1;
 	int i;
 
-	pthread_mutex_lock(&opponents_mutex);
+	pthread_mutex_lock(&players_mutex);
 	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
-		if (!opponents[i].used)
+		if (!players[i].used)
 			break;
 	}
 
 	if (i >= NETWORK_MAX_OPPONENTS)
 		return -1;
 
-	opponents[i].id = id;
-	opponents[i].nick = malloc(strlen(nick) + 1);
-	if (opponents[i].nick == NULL)
+	players[i].id = id;
+	players[i].used = 1;
+	players[i].nick = malloc(strlen(nick) + 1);
+	if (players[i].nick == NULL)
 		goto out;
-	strcpy(opponents[i].nick, nick);
+	strcpy(players[i].nick, nick);
 
 	ret = 0;
 out:
-	pthread_mutex_unlock(&opponents_mutex);
+	pthread_mutex_unlock(&players_mutex);
 
 	return ret;
 }
@@ -143,17 +223,17 @@ static int remove_id(unsigned long id) {
 	int ret = -1;
 	int i;
 
-	pthread_mutex_lock(&opponents_mutex);
+	pthread_mutex_lock(&players_mutex);
 	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
-		if (opponents[i].id == id) {
-			opponents[i].used = 0;
-			free(opponents[i].nick);
-			opponents[i].nick = NULL;
+		if (players[i].id == id) {
+			players[i].used = 0;
+			free(players[i].nick);
+			players[i].nick = NULL;
 			ret = 1;
 			break;
 		}
 	}
-	pthread_mutex_unlock(&opponents_mutex);
+	pthread_mutex_unlock(&players_mutex);
 	return ret;
 }
 
@@ -161,18 +241,18 @@ const char *network_lookup_id(unsigned long id) {
 	char *ret = NULL;
 	int i;
 
-	pthread_mutex_lock(&opponents_mutex);
+	pthread_mutex_lock(&players_mutex);
 
 	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
-		if (opponents[i].id == id) {
+		if (players[i].id == id) {
 			/* TODO: här finns ett race, nicket kan bli free:at
 			 * innan det används klar i andra ändan */
-			ret = opponents[i].nick;
+			ret = players[i].nick;
 			break;
 		}
 	}
 
-	pthread_mutex_unlock(&opponents_mutex);
+	pthread_mutex_unlock(&players_mutex);
 
 	return ret;
 }
@@ -218,8 +298,6 @@ static int handle_data(char *buf, size_t size) {
 	uint32_t u32;
 	uint16_t event;
 	size_t consumed = 0;
-	struct proto_move_recv pmove;
-	struct proto_resize_recv psize;
 	char mbuf[2048];
 	unsigned long id;
 	unsigned len;
@@ -236,23 +314,24 @@ static int handle_data(char *buf, size_t size) {
 	
 	memcpy(&u16, buf, 2);
 	event = ntohs(u16);
+	consumed = 2;
 
 	switch (event) {
 	case PROTO_MOVE:
-		if (size < sizeof(pmove) + 2)
+		if (size < 18 + consumed)
 			return 0;
 
-		memcpy(&pmove, &buf[2], sizeof(pmove));
+		move_player((struct proto_move_recv *) &buf[2]);
 
-		consumed = sizeof(pmove) + 2;
+		consumed += 18;
 		break;
 	case PROTO_RESIZE:
-		if (size < sizeof(psize) + 2)
+		if (size < 16 + consumed)
 			return 0;
 
-		memcpy(&psize, &buf[2], sizeof(psize));
+		resize_player((struct proto_resize_recv *) &buf[2]);
 
-		consumed = sizeof(psize) + 2;
+		consumed += 16;
 		break;
 	case PROTO_AMSG:
 		if (size < 6 + 2)
@@ -273,7 +352,7 @@ static int handle_data(char *buf, size_t size) {
 		lmq_send(&amsg_outgress, mbuf, len + 1, 0);
 		lmq_send(&amsg_outgress, &id, sizeof(id), 0);
 
-		consumed = len + 8;
+		consumed += len + 6;
 		break;
 	case PROTO_SMSG:
 		if (size < 2 + 2)
@@ -290,7 +369,7 @@ static int handle_data(char *buf, size_t size) {
 		printf("Server just said: '%s'\n", mbuf);
 		lmq_send(&smsg_outgress, mbuf, len + 1, 0);
 
-		consumed = len + 4;
+		consumed += len + 2;
 		break;
 	case PROTO_NEW_USER:
 		if (size < 5 + 2)
@@ -309,7 +388,7 @@ static int handle_data(char *buf, size_t size) {
 		register_id(id, mbuf);
 		printf("User %s with id %lu just joined\n", mbuf, id);
 
-		consumed = len + 7;
+		consumed += len + 5;
 		break;
 	case PROTO_DROPPED_USER:
 		if (size < 4 + 2)
@@ -321,7 +400,7 @@ static int handle_data(char *buf, size_t size) {
 		remove_id(id);
 		printf("User id %lu just left\n", id);
 
-		consumed = 6;
+		consumed += 4;
 		break;
 	default:
 		fprintf(stderr, "Konstig data, här. { 0x%02x, 0x%02x }\n",
@@ -419,15 +498,15 @@ static void *loop(void *arg) {
 
 			pthread_mutex_lock(&position_mutex);
 			local_object_pos_changed = 0;
-			pmove.x = local_object.x;
-			pmove.y = local_object.y;
-			pmove.z = local_object.z;
+			pmove.xi = htonl(local_object.xi);
+			pmove.yi = htonl(local_object.yi);
+			pmove.zi = htonl(local_object.zi);
 			pmove.angle = htons(local_object.angle);
 			pthread_mutex_unlock(&position_mutex);
 
 			memcpy(&sbuf[2], &pmove, sizeof(pmove));
 
-			send_all(sock, sbuf, sizeof(pmove) + 2, 0);
+			send_all(sock, sbuf, 16, 0);
 		}
 
 		/* Size to send */
@@ -436,15 +515,15 @@ static void *loop(void *arg) {
 			memcpy(&sbuf[0], &u16, 2);
 
 			pthread_mutex_lock(&position_mutex);
-			local_object_pos_changed = 0;
-			psize.x = local_object.size_x;
-			psize.y = local_object.size_y;
-			psize.z = local_object.size_z;
+			local_object_size_changed = 0;
+			psize.xi = htonl(local_object.size_xi);
+			psize.yi = htonl(local_object.size_yi);
+			psize.zi = htonl(local_object.size_zi);
 			pthread_mutex_unlock(&position_mutex);
 
 			memcpy(&sbuf[2], &psize, sizeof(psize));
 
-			send_all(sock, sbuf, sizeof(psize) + 2, 0);
+			send_all(sock, sbuf, 14, 0);
 		}
 	}
 
@@ -588,28 +667,37 @@ void network_deinit(void) {
 int network_put_position(struct object *o) {
 	pthread_mutex_lock(&position_mutex);
 
-	if (local_object.x != o->x || local_object.y != o->y ||
-			local_object.z != o->z ||
-			local_object.angle != o->angle) {
+	/* Damnit, floats! */
+	if (memcmp(&(local_object.x), &(o->x), sizeof(local_object.x) * 3)) {
 		local_object_pos_changed = 1;
-		local_object.x = o->x;
-		local_object.y = o->y;
-		local_object.z = o->z;
-		local_object.angle = o->angle;
 	}
-	if (local_object.size_x != o->size_x ||
-			local_object.size_y != o->size_y ||
-			local_object.size_z != o->size_z) {
+
+	if (memcmp(&(local_object.size_x), &(o->size_x), sizeof(local_object.size_x) * 3)) {
 		local_object_size_changed = 1;
-		local_object.size_x = o->size_x;
-		local_object.size_y = o->size_y;
-		local_object.size_z = o->size_z;
 	}
+
+	if (local_object_pos_changed || local_object_size_changed)
+		memcpy(&local_object, o, sizeof(struct object));
+
 	pthread_mutex_unlock(&position_mutex);
 
 	return 0;
 }
 
-int network_get_positions(struct object *o[]) {
+int network_get_positions(struct opponent opponents[]) {
+	int i;
+	pthread_mutex_lock(&players_mutex);
+	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
+		if (players[i].used) {
+			opponents[i].in_use = 1;
+			memcpy(opponents[i].o, &(players[i].o), sizeof(struct object));
+			opponents[i].id = players[i].id;
+			object_update_circle(opponents[i].o); // TODO: Detta görs alldeles för ofta
+		}
+		else {
+			opponents[i].in_use = 0;
+		}
+	}
+	pthread_mutex_unlock(&players_mutex);
 	return 0;
 }

@@ -225,7 +225,7 @@ static void draw_quads(float vertices[], int count) {
 
 struct car bil;
 struct car opponent_cars[NETWORK_MAX_OPPONENTS];
-struct objects *opponent_objects[NETWORK_MAX_OPPONENTS];
+struct opponent opponents[NETWORK_MAX_OPPONENTS];
 
 static void init_gubbe(struct gubbe *g) {
     g->alive=true;
@@ -952,6 +952,8 @@ static int CalcGameVars()
 
 static int DrawGLScene()
 {
+	int i;
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	/* Set camera position (by translating the world in the opposite direction */
@@ -1004,6 +1006,12 @@ static int DrawGLScene()
 	// öj, det fungerar... Men det fungerar nog inte om man ska ha fler bilar... <- Nuså. :p
 
         car_render(&bil);
+	if (Network) {
+		for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
+			if (opponents[i].in_use)
+				car_render(&(opponent_cars[i]));
+		}
+	}
 
 	// Rita upp gubbbananerna...
 	// Hoho! De SNURRAR!!! :)))))
@@ -1249,6 +1257,18 @@ static int parse_options(int argc, char *argv[])
 	return optind;
 }
 
+static void opponents_init() {
+	int i;
+
+	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
+		opponents[i].o = &(opponent_cars[i].o);
+		opponent_cars[i].t1=1;
+		opponent_cars[i].t2=1;
+		opponent_cars[i].t3=1;
+		opponent_cars[i].t4=1;
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	// Voila, en slumpgenerator... då var det bara collisiondetection grejjen kvar...
@@ -1333,6 +1353,7 @@ int main(int argc, char *argv[])
 
         hud_init();
 	sound_init();
+	opponents_init();
 
 	while(!done)
 	{
@@ -1355,6 +1376,7 @@ int main(int argc, char *argv[])
 
 		if (Network) {
 			network_put_position(&(bil.o));
+			network_get_positions(opponents);
 
 			unsigned long id;
 			while (network_amsg_recv(mbuf, &id, 1024) > 0) {

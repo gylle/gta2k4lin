@@ -2,10 +2,32 @@
 #define OBJECT_H
 
 struct object {
-	float x, y, z;
+	union {
+		float x;
+		uint32_t xi;
+	};
+	union {
+		float y;
+		uint32_t yi;
+	};
+	union {
+		float z;
+		uint32_t zi;
+	};
 	float speed;
 	int angle;
-	float size_x, size_y, size_z;
+	union {
+		float size_x;
+		uint32_t size_xi;
+	};
+	union {
+		float size_y;
+		uint32_t size_yi;
+	};
+	union {
+		float size_z;
+		uint32_t size_zi;
+	};
 	float circle; /* used for rough estimations */
 	struct square *square;
 	struct object *next;
