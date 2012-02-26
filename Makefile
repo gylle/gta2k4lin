@@ -21,7 +21,7 @@ endif
 
 LIBS=$(shell pkg-config --libs $(LIBRARIES)) $(LIBS_EXTRA)
 
-CFLAGS=-O2 -Wall -I./src $(shell pkg-config --cflags $(LIBRARIES)) -lm
+CFLAGS=-O2 -Wall -I./src $(shell pkg-config --cflags $(LIBRARIES)) -lm -g
 
 CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpermissive
 
