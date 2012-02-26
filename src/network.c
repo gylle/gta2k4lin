@@ -36,12 +36,15 @@
 #include <poll.h>
 #include <sys/ioctl.h>
 
+#include "object.h"
+#include "network.h"
 #include "lmq.h"
 
 #define PROTO_NICK		0
 #define PROTO_REG_COMMIT	90
 #define PROTO_REG_ACK		91
 #define PROTO_MOVE		100
+#define PROTO_RESIZE		101
 #define PROTO_AMSG		110
 #define PROTO_SMSG		111
 #define PROTO_NEW_USER		120
@@ -55,9 +58,9 @@ lmq_t amsg_outgress;
 lmq_t smsg_outgress;
 
 pthread_mutex_t position_mutex = PTHREAD_MUTEX_INITIALIZER;
-float pos[3];
-int angle;
-int pos_changed;
+struct object local_object;
+int local_object_pos_changed;
+int local_object_size_changed;
 pthread_t thread;
 
 int socktransferunit; /* damp */
@@ -66,11 +69,10 @@ struct opponent {
 	unsigned long id;
 	int used;
 	char *nick;
-	float position[3];
+	struct object o;
 };
 
-#define MAX_OPPONENTS 64
-struct opponent opponents[MAX_OPPONENTS];
+struct opponent opponents[NETWORK_MAX_OPPONENTS];
 pthread_mutex_t opponents_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 struct timeval last_position_update;
@@ -84,10 +86,19 @@ struct proto_move_send {
 	int angle;
 } __attribute__((packed));
 
+struct proto_resize_send {
+	float x, y, z;
+} __attribute__((packed));
+
 struct proto_move_recv {
 	uint32_t id;
 	float x, y, z;
 	int angle;
+} __attribute__((packed));
+
+struct proto_resize_recv {
+	uint32_t id;
+	float x, y, z;
 } __attribute__((packed));
 
 int network_amsg_send(char *msg) {
@@ -107,12 +118,12 @@ static int register_id(unsigned long id, char *nick) {
 	int i;
 
 	pthread_mutex_lock(&opponents_mutex);
-	for (i = 0; i < MAX_OPPONENTS; i++) {
+	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
 		if (!opponents[i].used)
 			break;
 	}
 
-	if (i >= MAX_OPPONENTS)
+	if (i >= NETWORK_MAX_OPPONENTS)
 		return -1;
 
 	opponents[i].id = id;
@@ -133,7 +144,7 @@ static int remove_id(unsigned long id) {
 	int i;
 
 	pthread_mutex_lock(&opponents_mutex);
-	for (i = 0; i < MAX_OPPONENTS; i++) {
+	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
 		if (opponents[i].id == id) {
 			opponents[i].used = 0;
 			free(opponents[i].nick);
@@ -152,7 +163,7 @@ const char *network_lookup_id(unsigned long id) {
 
 	pthread_mutex_lock(&opponents_mutex);
 
-	for (i = 0; i < MAX_OPPONENTS; i++) {
+	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
 		if (opponents[i].id == id) {
 			/* TODO: här finns ett race, nicket kan bli free:at
 			 * innan det används klar i andra ändan */
@@ -208,6 +219,7 @@ static int handle_data(char *buf, size_t size) {
 	uint16_t event;
 	size_t consumed = 0;
 	struct proto_move_recv pmove;
+	struct proto_resize_recv psize;
 	char mbuf[2048];
 	unsigned long id;
 	unsigned len;
@@ -233,6 +245,14 @@ static int handle_data(char *buf, size_t size) {
 		memcpy(&pmove, &buf[2], sizeof(pmove));
 
 		consumed = sizeof(pmove) + 2;
+		break;
+	case PROTO_RESIZE:
+		if (size < sizeof(psize) + 2)
+			return 0;
+
+		memcpy(&psize, &buf[2], sizeof(psize));
+
+		consumed = sizeof(psize) + 2;
 		break;
 	case PROTO_AMSG:
 		if (size < 6 + 2)
@@ -322,6 +342,7 @@ static void *loop(void *arg) {
 	size_t rbufpos = 0;
 	uint16_t u16;
 	struct proto_move_send pmove;
+	struct proto_resize_send psize;
 	struct pollfd fds[8];
 	int nfds;
 	int r;
@@ -392,21 +413,38 @@ static void *loop(void *arg) {
 		}
 
 		/* position to send */
-		if (pos_changed) {
+		if (local_object_pos_changed) {
 			u16 = htons(PROTO_MOVE);
 			memcpy(&sbuf[0], &u16, 2);
 
 			pthread_mutex_lock(&position_mutex);
-			pos_changed = 0;
-			pmove.x = pos[0];
-			pmove.y = pos[1];
-			pmove.z = pos[2];
-			pmove.angle = htons(angle);
+			local_object_pos_changed = 0;
+			pmove.x = local_object.x;
+			pmove.y = local_object.y;
+			pmove.z = local_object.z;
+			pmove.angle = htons(local_object.angle);
 			pthread_mutex_unlock(&position_mutex);
 
 			memcpy(&sbuf[2], &pmove, sizeof(pmove));
 
 			send_all(sock, sbuf, sizeof(pmove) + 2, 0);
+		}
+
+		/* Size to send */
+		if (local_object_size_changed) {
+			u16 = htons(PROTO_RESIZE);
+			memcpy(&sbuf[0], &u16, 2);
+
+			pthread_mutex_lock(&position_mutex);
+			local_object_pos_changed = 0;
+			psize.x = local_object.size_x;
+			psize.y = local_object.size_y;
+			psize.z = local_object.size_z;
+			pthread_mutex_unlock(&position_mutex);
+
+			memcpy(&sbuf[2], &psize, sizeof(psize));
+
+			send_all(sock, sbuf, sizeof(psize) + 2, 0);
 		}
 	}
 
@@ -547,18 +585,31 @@ void network_deinit(void) {
 	lmq_free(&smsg_outgress);
 }
 
-int network_put_position(float x, float y, float z, int a) {
+int network_put_position(struct object *o) {
 	pthread_mutex_lock(&position_mutex);
-	pos_changed = 1;
-	pos[0] = x;
-	pos[1] = y;
-	pos[2] = z;
-	angle = a;
+
+	if (local_object.x != o->x || local_object.y != o->y ||
+			local_object.z != o->z ||
+			local_object.angle != o->angle) {
+		local_object_pos_changed = 1;
+		local_object.x = o->x;
+		local_object.y = o->y;
+		local_object.z = o->z;
+		local_object.angle = o->angle;
+	}
+	if (local_object.size_x != o->size_x ||
+			local_object.size_y != o->size_y ||
+			local_object.size_z != o->size_z) {
+		local_object_size_changed = 1;
+		local_object.size_x = o->size_x;
+		local_object.size_y = o->size_y;
+		local_object.size_z = o->size_z;
+	}
 	pthread_mutex_unlock(&position_mutex);
 
 	return 0;
 }
 
-int network_get_positions(float *x, float *y, float *z, int *angle, int size) {
+int network_get_positions(struct object *o[]) {
 	return 0;
 }

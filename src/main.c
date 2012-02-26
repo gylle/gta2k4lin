@@ -224,6 +224,8 @@ static void draw_quads(float vertices[], int count) {
 }
 
 struct car bil;
+struct car opponent_cars[NETWORK_MAX_OPPONENTS];
+struct objects *opponent_objects[NETWORK_MAX_OPPONENTS];
 
 static void init_gubbe(struct gubbe *g) {
     g->alive=true;
@@ -1351,9 +1353,13 @@ int main(int argc, char *argv[])
                 hud_render();
 		SDL_GL_SwapBuffers();
 
-		unsigned long id;
-		while (network_amsg_recv(mbuf, &id, 1024) > 0) {
-			peer_send_line(network_lookup_id(id), mbuf);
+		if (Network) {
+			network_put_position(&(bil.o));
+
+			unsigned long id;
+			while (network_amsg_recv(mbuf, &id, 1024) > 0) {
+				peer_send_line(network_lookup_id(id), mbuf);
+			}
 		}
 
 		while(TimerTicks+30>SDL_GetTicks()) { usleep(1); }
