@@ -108,10 +108,9 @@ float blendcolor;
 
 // Fina spel grejjer!
 struct cube {
-	// Vilket plan den är på. 0.0f är det man går/åker på,
-	float z;
 	// Vilken textur som ska mappas till kuben...
 	int texturenr;
+	int in_use;
 	// Ett namn på stället man är.
 	const char* beskrivning;
 
@@ -198,6 +197,7 @@ struct spelare player;
 struct world {
 	int nrcubex;
 	int nrcubey;
+	int nrcubez;
 	struct cube *map;
 	const char **texture_filenames;
 	GLuint *texIDs;
@@ -205,7 +205,7 @@ struct world {
 };
 
 #define TEXTURE_PATH "data/"
-#define map_cube(world, x, y) world.map[(x) * (world).nrcubey + (y)]
+#define map_cube(world, x, y, z) world.map[((x) * (world).nrcubey + (y)) * (world).nrcubez + (z)]
 struct world world;
 
 static void draw_quads(float vertices[], int count) {
@@ -461,82 +461,87 @@ static int LoadLevel()
 	// LADDA IN!!!!
 	
 	// Allocate them cubes!
-	world.map = (struct cube *)calloc(world.nrcubex * world.nrcubey, sizeof(struct cube));
+	world.map = (struct cube *)calloc(world.nrcubex * world.nrcubey * world.nrcubez, sizeof(struct cube));
 	if (world.map == NULL)  {
 		return false;
 	}
+	memset(world.map, 0, world.nrcubex * world.nrcubey * world.nrcubez *
+			sizeof(struct cube));
 
-	int loop1 = 0, loop2 = 0;
+	int loop1, loop2, loop3;
 
-	for(loop1=0;loop1<world.nrcubex;loop1++)
+	for(loop1=0;loop1<world.nrcubex;loop1++) {
 		for(loop2=0;loop2<world.nrcubey;loop2++) {
-			map_cube(world, loop1, loop2).o.size_x=BSIZE * 2;
-			map_cube(world, loop1, loop2).o.size_y=BSIZE * 2;
-			map_cube(world, loop1, loop2).o.size_z=BSIZE * 2;
-			map_cube(world, loop1, loop2).o.x=loop1 * BSIZE * 2;
-			map_cube(world, loop1, loop2).o.y=loop2 * BSIZE * 2;
-			map_cube(world, loop1, loop2).o.z=0.0f;
-			map_cube(world, loop1, loop2).texturenr=0;
-			map_cube(world, loop1, loop2).beskrivning="Testbeskrivning";
-			object_update_circle(&(map_cube(world, loop1, loop2).o));
+			for(loop3=0;loop3<world.nrcubez;loop3++) {
+				map_cube(world, loop1, loop2, loop3).o.size_x=BSIZE * 2;
+				map_cube(world, loop1, loop2, loop3).o.size_y=BSIZE * 2;
+				map_cube(world, loop1, loop2, loop3).o.size_z=BSIZE * 2;
+				map_cube(world, loop1, loop2, loop3).o.x=loop1 * BSIZE * 2;
+				map_cube(world, loop1, loop2, loop3).o.y=loop2 * BSIZE * 2;
+				map_cube(world, loop1, loop2, loop3).o.z= -1 * loop3 * BSIZE * 2;
+				map_cube(world, loop1, loop2, loop3).texturenr=0;
+				map_cube(world, loop1, loop2, loop3).beskrivning="Testbeskrivning";
+				object_update_circle(&(map_cube(world, loop1, loop2, loop3).o));
+			}
 		}
+	}
 
-	map_cube(world, 0, 0).o.z = BSIZE;
-	map_cube(world, 0, 0).texturenr=1;
+	map_cube(world, 0, 0, 0).o.z = BSIZE;
+	map_cube(world, 0, 0, 0).texturenr=1;
 
-	map_cube(world, 0, 1).o.z = BSIZE * 2;
-	map_cube(world, 0, 1).texturenr=1;
+	map_cube(world, 0, 1, 0).o.z = BSIZE * 2;
+	map_cube(world, 0, 1, 0).texturenr=1;
 
 	// Vägen -------------------------------
 	for(loop1=0;loop1<world.nrcubey;loop1++)
-		map_cube(world, 1, loop1).texturenr=2;
+		map_cube(world, 1, loop1, 0).texturenr=2;
 
 	for(loop1=0;loop1<world.nrcubey;loop1++)
-		map_cube(world, 2, loop1).texturenr=3;
+		map_cube(world, 2, loop1, 0).texturenr=3;
 
 	for(loop1=0;loop1<world.nrcubex;loop1++)
-		map_cube(world, loop1, world.nrcubey-2).texturenr=8;
+		map_cube(world, loop1, world.nrcubey-2, 0).texturenr=8;
 
 	for(loop1=2;loop1<world.nrcubex;loop1++)
-		map_cube(world, loop1, world.nrcubey-3).texturenr=9;
+		map_cube(world, loop1, world.nrcubey-3, 0).texturenr=9;
 
-	map_cube(world, 1, world.nrcubey-2).texturenr=5;
-	map_cube(world, 2, world.nrcubey-2).texturenr=6;
-	map_cube(world, 2, world.nrcubey-3).texturenr=7;
+	map_cube(world, 1, world.nrcubey-2, 0).texturenr=5;
+	map_cube(world, 2, world.nrcubey-2, 0).texturenr=6;
+	map_cube(world, 2, world.nrcubey-3, 0).texturenr=7;
 
 
 	// "Väggen" runtomkring
 	for(loop1=0;loop1<world.nrcubey;loop1++) {
-		map_cube(world, 0, loop1).texturenr=4;
-		map_cube(world, 0, loop1).o.z = BSIZE * 2;
+		map_cube(world, 0, loop1, 0).texturenr=4;
+		map_cube(world, 0, loop1, 0).o.z = BSIZE * 2;
 	}
 
 	for(loop1=0;loop1<world.nrcubey;loop1++) {
-		map_cube(world, world.nrcubex-1, loop1).texturenr=4;
-		map_cube(world, world.nrcubex-1, loop1).o.z = BSIZE * 2;
+		map_cube(world, world.nrcubex-1, loop1, 0).texturenr=4;
+		map_cube(world, world.nrcubex-1, loop1, 0).o.z = BSIZE * 2;
 	}
 
 	for(loop1=0;loop1<world.nrcubex;loop1++) {
-		map_cube(world, loop1, 0).texturenr=4;
-		map_cube(world, loop1, 0).o.z = BSIZE * 2;
+		map_cube(world, loop1, 0, 0).texturenr=4;
+		map_cube(world, loop1, 0, 0).o.z = BSIZE * 2;
 	}
 	for(loop1=0;loop1<world.nrcubex;loop1++) {
-		map_cube(world, loop1, world.nrcubey-1).texturenr=4;
-		map_cube(world, loop1, world.nrcubey-1).o.z = BSIZE * 2;
+		map_cube(world, loop1, world.nrcubey-1, 0).texturenr=4;
+		map_cube(world, loop1, world.nrcubey-1, 0).o.z = BSIZE * 2;
 	}
 
 	// Vi lägger in lite buskar
 	for(loop1=1;loop1<(world.nrcubey/2-1);loop1+=2) {
-		map_cube(world, world.nrcubex/2, loop1).texturenr=15;
-		map_cube(world, world.nrcubex/2, loop1).o.z = BSIZE * 2;
+		map_cube(world, world.nrcubex/2, loop1, 0).texturenr=15;
+		map_cube(world, world.nrcubex/2, loop1, 0).o.z = BSIZE * 2;
 	}
 
 	// Vägen in till mitten och den fina credits saken där.
-	for(loop1=3;loop1<world.nrcubex/2;loop1++)
-		map_cube(world, loop1, world.nrcubey/2).texturenr=7;
+	for(loop1=3;loop1<=world.nrcubex/2;loop1++)
+		map_cube(world, loop1, world.nrcubey/2, 0).texturenr=7;
 
-	map_cube(world, world.nrcubex/2, world.nrcubey/2).texturenr=10;
-	map_cube(world, world.nrcubex/2, world.nrcubey/2).o.z = BSIZE * 2 * 2;
+	map_cube(world, world.nrcubex/2, world.nrcubey/2, 1).texturenr=10;
+	map_cube(world, world.nrcubex/2, world.nrcubey/2, 1).o.z = BSIZE * 2 * 2;
 
 	return true;
 }
@@ -835,7 +840,7 @@ static int CalcGameVars()
 	// kontrollera så att inte bilen krockar med en stor KUUB!
 	for(loop1=0 ;loop1<world.nrcubex;loop1++) {
 		for(loop2=0;loop2<world.nrcubey;loop2++) {
-			if (object_colliding(&(map_cube(world, loop1, loop2).o), &bil.o)) {
+			if (object_colliding(&(map_cube(world, loop1, loop2, 0).o), &bil.o)) {
 				player.krockar++;
 
 				int damage = abs((int)(bil.o.speed*5));
@@ -917,7 +922,7 @@ static int CalcGameVars()
 					if (!gubbar[loop3].alive)
 						continue;
 
-					if (object_colliding(&(map_cube(world, loop1, loop2).o), &gubbar[loop3].o)) {
+					if (object_colliding(&(map_cube(world, loop1, loop2, 0).o), &gubbar[loop3].o)) {
 						object_backward(&gubbar[loop3].o);
 						gubbar[loop3].o.angle+=60;
 					}
@@ -975,27 +980,29 @@ static int DrawGLScene()
 
 	glColor4f(1.0f,1.0f,1.0f,blendcolor);
 
-	int loop1 = 0, loop2 = 0;
+	int loop1, loop2, loop3;
 
 	// Ritar upp banan -----------------------------
 	float lp1bstmp,lp2bstmp,ztmp;
 	for(loop1=0; loop1<world.nrcubex; loop1++) {
 		for(loop2=0; loop2<world.nrcubey; loop2++) {
+			for(loop3=0; loop3<world.nrcubez; loop3++) {
 
 
-			lp1bstmp=(float)loop1*(BSIZE*2);
-			lp2bstmp=(float)loop2*(BSIZE*2);
-			ztmp=map_cube(world, loop1, loop2).o.z;
+				lp1bstmp=(float)loop1*(BSIZE*2);
+				lp2bstmp=(float)loop2*(BSIZE*2);
+				ztmp=map_cube(world, loop1, loop2, loop3).o.z;
 
-                        glPushMatrix();
-                        glTranslatef(lp1bstmp, lp2bstmp, ztmp);
+				glPushMatrix();
+				glTranslatef(lp1bstmp, lp2bstmp, ztmp);
 
-			glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, loop1, loop2).texturenr]);
+				glEnable(GL_TEXTURE_2D);
+				glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, loop1, loop2, loop3).texturenr]);
 
-                        draw_quads(map_cube_vertices, sizeof(map_cube_vertices)/(20*sizeof(float)));
+				draw_quads(map_cube_vertices, sizeof(map_cube_vertices)/(20*sizeof(float)));
 
-                        glPopMatrix();
+				glPopMatrix();
+			}
 		}
 	}
 
@@ -1282,6 +1289,7 @@ int main(int argc, char *argv[])
 	// C++ SUGER SÅ MYCKET!!!1
 	world.nrcubex = 20;
 	world.nrcubey = 20;
+	world.nrcubez = 2;
 	// De texturer som på nåt sätt ska laddas är:
 	const char *texture_filenames[] = {
 		"test.tga",
