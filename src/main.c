@@ -619,6 +619,50 @@ static int InitGL(int width, int height) //		 All Setup For OpenGL Goes Here
 static int RespondToKeys()
 {
 
+	float sttmp;
+	bool brakepressed=false;
+        static int broms_in_progress = 0;
+
+	if(keys[SDLK_SPACE]) {
+		brakepressed=true;
+		if(bil.o.speed<0.0f && bil.o.speed>-bil.bromsspeed)
+			bil.o.speed=0.0f;
+		if(bil.o.speed>0.0f && bil.o.speed<bil.bromsspeed)
+			bil.o.speed=0.0f;
+
+		if (!broms_in_progress) {
+			sound_play(broms);
+			broms_in_progress = 1;
+		}
+
+		if(bil.o.speed<0.0f)
+			bil.o.speed+=bil.bromsspeed;
+		if(bil.o.speed>0.0f)
+			bil.o.speed-=bil.bromsspeed;
+
+	}
+	else {
+		broms_in_progress = 0;
+	}
+
+	if(keys[SDLK_LEFT]) {
+		sttmp=bil.o.speed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och
+		if(brakepressed)
+			sttmp+=0.7f;
+
+		if(bil.o.speed!=0.0f)
+			bil.o.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
+	}
+
+	if(keys[SDLK_RIGHT]) {
+		sttmp=bil.o.speed/bil.maxspeed;
+		if(brakepressed)
+			sttmp+=0.7f;
+
+		if(bil.o.speed!=0.0f)
+			bil.o.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
+	}
+
 	if(bil.helhet==0) {
 		if(keys[SDLK_RETURN]) {
 			bil.helhet=100;
@@ -645,58 +689,11 @@ static int RespondToKeys()
 		}
 	}
 
-	bool brakepressed=false;
-        static int broms_in_progress = 0;
-
-	if(keys[SDLK_SPACE]) {
-		brakepressed=true;
-		if(bil.o.speed<0.0f && bil.o.speed>-bil.bromsspeed)
-			bil.o.speed=0.0f;
-		if(bil.o.speed>0.0f && bil.o.speed<bil.bromsspeed)
-			bil.o.speed=0.0f;
-
-		if (!broms_in_progress) {
-			sound_play(broms);
-			broms_in_progress = 1;
-		}
-
-		if(bil.o.speed<0.0f)
-			bil.o.speed+=bil.bromsspeed;
-		if(bil.o.speed>0.0f)
-			bil.o.speed-=bil.bromsspeed;
-
-	}
-	else {
-		broms_in_progress = 0;
-	}
-
 	if(keys[SDLK_TAB]) {
 		sound_cont_play(tut);
 	}
 	else {
 		sound_cont_stop(tut, 0);
-	}
-
-	float sttmp;
-
-
-
-	if(keys[SDLK_LEFT]) {
-		sttmp=bil.o.speed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och
-		if(brakepressed)
-			sttmp+=0.7f;
-
-		if(bil.o.speed!=0.0f)
-			bil.o.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
-	}
-
-	if(keys[SDLK_RIGHT]) {
-		sttmp=bil.o.speed/bil.maxspeed;
-		if(brakepressed)
-			sttmp+=0.7f;
-
-		if(bil.o.speed!=0.0f)
-			bil.o.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
 	}
 
 	// Detta är debug grejjer/saker som inte ska vara kvar i "riktiga" versionen...
