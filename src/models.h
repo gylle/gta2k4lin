@@ -13,36 +13,6 @@
 
 /* TODO: They are already centered in x/y, do the same for z. */
 
-float car_vertices[] = {
-    /* Ovanifrån */
-    -CARSIZE_X/2, -CARSIZE_Y/2, CARSIZE_Z, 0.0f, 0.0f,
-    -CARSIZE_X/2,  CARSIZE_Y/2, CARSIZE_Z, 0.0f, 1.0f,
-    CARSIZE_X/2,  CARSIZE_Y/2, CARSIZE_Z, 1.0f, 1.0f,
-    CARSIZE_X/2, -CARSIZE_Y/2, CARSIZE_Z, 1.0f, 0.0f,
-
-    /* Left */
-    -CARSIZE_X/2, CARSIZE_Y/2, 0.0f, 0.0f, 0.0f,
-    -CARSIZE_X/2, CARSIZE_Y/2, CARSIZE_Z, 0.0f, 1.0f,
-    -CARSIZE_X/2, -CARSIZE_Y/2, CARSIZE_Z, 1.0f, 1.0f,
-    -CARSIZE_X/2, -CARSIZE_Y/2, 0.0f, 1.0f, 0.0f,
-
-    /* Right */
-    CARSIZE_X/2, -CARSIZE_Y/2, 0.0f, 0.0f, 0.0f,
-    CARSIZE_X/2, -CARSIZE_Y/2, CARSIZE_Z, 0.0f, 1.0f,
-    CARSIZE_X/2, CARSIZE_Y/2, CARSIZE_Z, 1.0f, 1.0f,
-    CARSIZE_X/2, CARSIZE_Y/2, 0.0f, 1.0f, 0.0f,
-
-    -CARSIZE_X/2, -CARSIZE_Y/2, 0.0f, 0.0f, 0.0f,
-    -CARSIZE_X/2, -CARSIZE_Y/2, CARSIZE_Z, 0.0f, 1.0f,
-    CARSIZE_X/2, -CARSIZE_Y/2, CARSIZE_Z, 1.0f, 1.0f,
-    CARSIZE_X/2, -CARSIZE_Y/2, 0.0f, 1.0f, 0.0f,
-
-    CARSIZE_X/2, CARSIZE_Y/2, 0.0f, 0.0f, 0.0f,
-    CARSIZE_X/2, CARSIZE_Y/2, CARSIZE_Z, 0.0f, 1.0f,
-    -CARSIZE_X/2, CARSIZE_Y/2, CARSIZE_Z, 1.0f, 1.0f,
-    -CARSIZE_X/2, CARSIZE_Y/2, 0.0f, 1.0f, 0.0f
-};
-
 float gubbe_top_vertices[] = {
     -GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 0.0f, 0.0f,
     -GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 0.0f, 1.0f,

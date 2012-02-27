@@ -66,6 +66,7 @@
 #include "hud.h"
 #include "object.h"
 #include "models.h"
+#include "stl.h"
 
 int initial_width = 640;
 int initial_height = 480;
@@ -131,6 +132,7 @@ struct car {
 	int Points;
 
 	struct object o;
+	struct stl_model *model;
 };
 
 struct camera {
@@ -219,6 +221,20 @@ static void draw_quads(float vertices[], int count) {
                 glTexCoord2f(vertices[offset+3], vertices[offset+4]);
                 glVertex3f(vertices[offset], vertices[offset+1], vertices[offset+2]);
             }
+        }
+    glEnd();
+}
+
+static void draw_stl_model(struct stl_model *m) {
+    static const int stride = 3 + 3 + 2;
+
+    glBegin(GL_TRIANGLES);
+        int i;
+        for(i = 0; i < m->nr_of_vertices; i++) {
+            int offset = i*stride;
+            glTexCoord2f(m->data[offset+6], m->data[offset+7]);
+            glNormal3f(m->data[offset+3], m->data[offset+4], m->data[offset+5]);
+            glVertex3f(m->data[offset], m->data[offset+1], m->data[offset+2]);
         }
     glEnd();
 }
@@ -344,9 +360,23 @@ static void init_gubbe_displaylist() {
     glEndList();
 }
 
+static void car_set_model(struct car *bil) {
+    static struct stl_model *car_model;
+
+    if(car_model == NULL) {
+        car_model = load_stl_model("data/gta2kcar.stl");
+    }
+    bil->model = car_model;
+}
+
 static void init_car(struct car *bil) {
     // Ladda en standard bil...
 
+    car_set_model(bil);
+
+    /* FIXME: CARSIZE can (should?) theoretically be replaced by values
+     *  calculated from the model's min/max values.
+     */
     bil->o.size_x=CARSIZE_X;
     bil->o.size_y=CARSIZE_Y;
     bil->o.size_z=CARSIZE_Z;
@@ -381,13 +411,14 @@ static void init_car(struct car *bil) {
 }
 
 static void car_render(struct car *bil) {
+
     glPushMatrix();
 
     glTranslatef(bil->o.x, bil->o.y, bil->o.z);
     glRotatef((float)bil->o.angle,0.0f,0.0f,1.0f);
 
     glBindTexture(GL_TEXTURE_2D,world.texIDs[bil->t1]);
-    draw_quads(car_vertices, sizeof(car_vertices)/(20*sizeof(float)));
+    draw_stl_model(bil->model);
 
     glPopMatrix();
 }
@@ -1273,6 +1304,7 @@ static void opponents_init() {
 		opponent_cars[i].t2=1;
 		opponent_cars[i].t3=1;
 		opponent_cars[i].t4=1;
+		car_set_model(&opponent_cars[i]);
 	}
 }
 
