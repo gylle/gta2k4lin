@@ -38,7 +38,9 @@ Mix_Chunk *sound_chunks[NUM_SOUNDS];
 
 /* Perhaps expose this during runtime in some nice way that does not only
  * depend on initalization? */
-int enabled = 0;
+static int enabled = 0;
+
+static int welcome_channel = 0;
 
 struct cont_sound {
 	enum sounds sound;
@@ -109,6 +111,12 @@ static void channel_finished(int channel) {
 
 	if (!enabled)
 		return;
+
+	if (channel == welcome_channel) {
+		welcome_channel = -1;
+		sound_cont_play(farlig);
+		return;
+	}
 
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		if (cont_sounds[i].channel == channel) {
@@ -187,8 +195,7 @@ int sound_init() {
 
 	enabled = 1;
 
-	sound_play(welcome);
-	sound_cont_play(farlig);
+	welcome_channel = sound_play(welcome);
 
 	return 0;
 }
