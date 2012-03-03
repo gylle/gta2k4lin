@@ -36,6 +36,10 @@ Mix_Chunk *sound_chunks[NUM_SOUNDS];
 
 #define NUM_CHANNELS 4
 
+/* Perhaps expose this during runtime in some nice way that does not only
+ * depend on initalization? */
+int enabled = 0;
+
 struct cont_sound {
 	enum sounds sound;
 	int channel;
@@ -77,6 +81,9 @@ static int load_samples()				// Här loadar vi alla bananiga samples vi ska dra 
 
 int sound_play_on_channel(enum sounds sound, int channel)
 {
+	if (!enabled)
+		return -1;
+
 	if (sound_chunks[sound] == NULL) {
 		fprintf(stderr, "Sound chunk is not loaded: %d\n", sound);
 	}
@@ -100,6 +107,9 @@ int sound_play(enum sounds sound)
 static void channel_finished(int channel) {
 	int i;
 
+	if (!enabled)
+		return;
+
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		if (cont_sounds[i].channel == channel) {
 			cont_sounds[i].channel =
@@ -113,6 +123,9 @@ static void channel_finished(int channel) {
 
 void sound_cont_play(enum sounds sound) {
 	int i;
+
+	if (!enabled)
+		return;
 
 	/* Already playing? */
 	for (i = 0; i < NUM_CHANNELS; i++) {
@@ -135,6 +148,9 @@ void sound_cont_play(enum sounds sound) {
 
 void sound_cont_stop(enum sounds sound, int halt) {
 	int i, channel;
+
+	if (!enabled)
+		return;
 
 	/* Halt and free slot */
 	for (i = 0; i < NUM_CHANNELS; i++) {
@@ -168,6 +184,8 @@ int sound_init() {
 	for (i = 0; i < NUM_CHANNELS; i++) {
 		cont_sounds[i].channel = -1;
 	}
+
+	enabled = 1;
 
 	sound_play(welcome);
 	sound_cont_play(farlig);
