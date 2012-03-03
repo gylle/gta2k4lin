@@ -18,7 +18,7 @@ int sound_play_on_channel(enum sounds sound, int channel);
 
 int sound_play(enum sounds sound);
 
-int sound_init();
+int sound_init(int music);
 
 void sound_cont_play(enum sounds sound);
 

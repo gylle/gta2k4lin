@@ -173,7 +173,7 @@ void sound_cont_stop(enum sounds sound, int halt) {
 
 }
 
-int sound_init() {
+int sound_init(int music) {
 	int i;
 
 	int audio_rate = 22050;
@@ -196,6 +196,9 @@ int sound_init() {
 	enabled = 1;
 
 	welcome_channel = sound_play(welcome);
+
+	if (!music)
+		welcome_channel = -1;
 
 	return 0;
 }

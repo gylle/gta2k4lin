@@ -84,6 +84,7 @@ bool keys[350];			// Array Used For The Keyboard Routine
 bool NoBlend=true;
 
 bool sound = true;
+int sound_music = 1;
 
 // Iallafall så är stommen för nätverket laggd...
 // Hmmm, det tar sig...
@@ -1196,7 +1197,8 @@ static void print_help()
 	fprintf(stderr, "  -6, --ipv6-only       Force usage of IPv6 when "
 			"connecting to a server\n");
 	fprintf(stderr, "  -h, --help            Show this help\n");
-	fprintf(stderr, "  -S, --no-sound        Switch on not-playing-sounds feature\n");
+	fprintf(stderr, "  -M, --no-music        Disable music\n");
+	fprintf(stderr, "  -S, --no-sound        Disable all sounds\n");
 }
 
 static int parse_options(int argc, char *argv[])
@@ -1213,9 +1215,10 @@ static int parse_options(int argc, char *argv[])
 		{"ipv6-only", no_argument,       0,  0 },
 		{"help",      no_argument,       0,  0 },
 		{"no-sound",  no_argument,       0,  0 },
+		{"no-music",  no_argument,       0,  0 },
 		{0,           0,                 0,  0 }
 	};
-	const char *short_options = "s:p:n:46hS";
+	const char *short_options = "s:p:n:46hSM";
 
 	while (1) {
 		opt = getopt_long(argc, argv, short_options,
@@ -1249,6 +1252,9 @@ static int parse_options(int argc, char *argv[])
 			case 6:
 				opt = 'S';
 				break;
+			case 7:
+				opt = 'M';
+				break;
 			}
 		}
 		switch (opt) {
@@ -1280,6 +1286,9 @@ static int parse_options(int argc, char *argv[])
 			break;
 		case 'S':
 			sound = false;
+			break;
+		case 'M':
+			sound_music = false;
 			break;
 		default:
 			printf("?? getopt returned character code 0x%x ??\n", opt);
@@ -1403,7 +1412,7 @@ int main(int argc, char *argv[])
 
         hud_init();
 	if (sound)
-		sound_init();
+		sound_init(sound_music);
 	opponents_init();
 
 	while(!done)
