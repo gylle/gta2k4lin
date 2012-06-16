@@ -61,12 +61,18 @@
 #include "SDL.h"
 #include "SDL_image.h"
 
+#include "Bullet-C-Api.h"
+#include "btwrap.h"
+
+#include "main.h"
 #include "sound.h"
 #include "network.h"
 #include "hud.h"
 #include "object.h"
 #include "models.h"
 #include "stl.h"
+#include "car.h"
+#include "gubbe.h"
 
 int initial_width = 640;
 int initial_height = 480;
@@ -78,6 +84,10 @@ const int sdl_bpp = 32; // Vi gillar 32 här dåva
 #define true  1
 
 #define nrgubbar 100
+
+/* Bullet */
+plPhysicsSdkHandle physics_sdk = 0;
+plDynamicsWorldHandle dynamics_world = 0;
 
 bool keys[350];			// Array Used For The Keyboard Routine
 
@@ -121,23 +131,6 @@ struct cube {
 	struct object o;
 };
 
-struct car {
-	// Texturer, nr1: tak. nr2: sidor. nr3: fram. nr4: bak:
-	int t1,t2,t3,t4;
-	// Fartsaker
-	float maxspeed,maxbspeed, accspeed, bromsspeed;
-	int turnspeed;
-	// Hur fort bilen stannar om man inte gasar
-	float speeddown;
-	// Hur hel bilen är(%). 100 är helhel, 0 är heltrasig.
-	int helhet;
-	// Poäng. I Multiplayer spel hur många "frags" man har...
-	int Points;
-
-	struct object o;
-	struct stl_model *model;
-};
-
 struct camera {
     GLfloat x, y, z;
     GLfloat SpeedVar;
@@ -167,21 +160,6 @@ static void camera_move_for_car(struct car *car) {
         camera.SpeedVar-=0.4f;
 }
 
-struct gubbe {
-	// Texturer. ltexture2=huvudet. ltexture=resten. dtexturer=texture då gubben dött...
-	int ltexture, ltexture2,  dtexture;
-	// Fartsaker...
-	float maxspeed,maxbspeed,accspeed;
-	// Lever?
-	bool alive;
-	// Tid tills han lever igen...
-	int atimer;
-
-	struct object o;
-};
-const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
-GLuint	GubbeDispList = 0;
-
 struct spelare {
 	// Poäng
 	int points;
@@ -192,28 +170,17 @@ struct spelare {
 };
 
 struct gubbe *gubbar; //[nrgubbar];
-
 struct spelare player;
 
 
 
 // Storleken på banan skulle behövas laddas in från en fil, men för tillfället vet jag inte riktigt hur det skulle gå till...
 
-struct world {
-	int nrcubex;
-	int nrcubey;
-	int nrcubez;
-	struct cube *map;
-	const char **texture_filenames;
-	GLuint *texIDs;
-	int ntextures;
-};
-
 #define TEXTURE_PATH "data/"
 #define map_cube(world, x, y, z) world.map[((x) * (world).nrcubey + (y)) * (world).nrcubez + (z)]
 struct world world;
 
-static void draw_quads(float vertices[], int count) {
+void draw_quads(float vertices[], int count) {
     /* Loosely modeled upon glDrawElements & co */
 
     glBegin(GL_QUADS);
@@ -228,203 +195,9 @@ static void draw_quads(float vertices[], int count) {
     glEnd();
 }
 
-static void draw_stl_model(struct stl_model *m) {
-    static const int stride = 3 + 3 + 2;
-
-    glBegin(GL_TRIANGLES);
-        int i;
-        for(i = 0; i < m->nr_of_vertices; i++) {
-            int offset = i*stride;
-            glTexCoord2f(m->data[offset+6], m->data[offset+7]);
-            glNormal3f(m->data[offset+3], m->data[offset+4], m->data[offset+5]);
-            glVertex3f(m->data[offset], m->data[offset+1], m->data[offset+2]);
-        }
-    glEnd();
-}
-
 struct car bil;
 struct car opponent_cars[NETWORK_MAX_OPPONENTS];
 struct opponent opponents[NETWORK_MAX_OPPONENTS];
-
-static void init_gubbe(struct gubbe *g) {
-    g->alive=true;
-
-    g->o.speed=0.0f;
-    g->maxspeed=0.3f;
-    g->accspeed=0.15f;
-    g->maxbspeed=0.2f;
-
-    //g->o.angle=0;
-
-    g->o.size_x=GUBBSIZE_X;
-    g->o.size_y=GUBBSIZE_Y;
-    g->o.size_z=GUBBSIZE_Z;
-    object_update_circle(&(g->o));
-
-    g->o.x=(float)((rand() % world.nrcubex*BSIZE*2)*100)/100.0f;
-    g->o.y=(float)((rand() % world.nrcubey*BSIZE*2)*100)/100.0f;
-    g->o.angle=rand() % 360;
-
-    g->o.z=BSIZE + GUBBSIZE_Z / 2;
-
-    g->ltexture=11;
-    g->ltexture2=13;
-    g->dtexture=12;
-
-    g->atimer = 0;
-}
-
-static void gubbe_move(struct gubbe *g) {
-    // den här funktionen som bestämmer vad gubbarna ska göra måste skrivas om,
-    // Gubbarna är totalt urblåsta.
-
-    if(g->alive) {
-        int tmprand=rand() % 100; // Ejjj, det wooorkar...
-
-        if(tmprand==0 && tmprand<3)  // gubben ska bara vrida sig fååå gånger..
-            g->o.angle+=10;
-
-        if(tmprand>=3 && tmprand<5)  // Ge även möjligheten att vända åt andra hållet...
-            g->o.angle-=10;
-
-        if(tmprand>=5 && tmprand<=100)
-            g->o.speed=g->o.speed+g->accspeed;
-
-
-
-    } else {
-        g->atimer++;
-
-        if(g->atimer>=gubbtid) {   // Jag antar att man borde randomiza ut platsen igen...
-            g->atimer=0;
-            g->alive=true;
-
-            g->o.x=(float)((rand() % world.nrcubex*BSIZE*2)*100)/100;
-            g->o.y=(float)((rand() % world.nrcubey*BSIZE*2)*100)/100;
-            g->o.angle=rand() % 360;
-        }
-    }
-
-    if(g->o.speed<0) {
-        if(g->o.speed<g->maxbspeed)
-            g->o.speed=g->maxbspeed;
-    } else {
-        if(g->o.speed>g->maxspeed)
-            g->o.speed=g->maxspeed;
-    }
-
-    if(g->o.angle<0)
-        g->o.angle=g->o.angle+360;
-    if(g->o.angle>359)
-        g->o.angle=g->o.angle-360;
-
-    if (g->alive)
-	object_forward(&(g->o));
-}
-
-static void gubbe_render(struct gubbe *g) {
-    glPushMatrix();
-
-    // HAHA!!! Det gick till slut! :)
-    glTranslatef(g->o.x,g->o.y,0);
-    glRotatef((float)g->o.angle,0.0f,0.0f,1.0f);
-
-    if(g->alive) {
-        if(!NoBlend)
-            glEnable(GL_BLEND);
-
-        glColor4f(1.0f,1.0f,1.0f,255);
-        glCallList(GubbeDispList);
-
-        if(blendcolor==0.0f)
-            glDisable(GL_BLEND);
-    } else {
-        // Är man överkörd står man nog inte upp längre... :) Det här blir bättre...
-        glBindTexture(GL_TEXTURE_2D,world.texIDs[g->dtexture]);
-
-        glTranslatef(0.0f, 0.0f, -GUBBSIZE_Z+0.01f);
-        draw_quads(gubbe_top_vertices, sizeof(gubbe_top_vertices)/(20*sizeof(float)));
-    }
-    glPopMatrix();
-}
-
-static void init_gubbe_displaylist() {
-    /* (Bygger på att den första gubben i gubbar är initialiserad */
-
-    // Vi bygger en Display List!!! EJJJJ!!!(som i öj) :)
-    GubbeDispList=glGenLists(1);
-
-    glNewList(GubbeDispList,GL_COMPILE);
-        glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture2]);
-        draw_quads(gubbe_top_vertices, sizeof(gubbe_top_vertices)/(20*sizeof(float)));
-
-        glBindTexture(GL_TEXTURE_2D,world.texIDs[gubbar[0].ltexture]);
-        draw_quads(gubbe_body_vertices, sizeof(gubbe_body_vertices)/(20*sizeof(float)));
-    glEndList();
-}
-
-static void car_set_model(struct car *bil) {
-    static struct stl_model *car_model;
-
-    if(car_model == NULL) {
-        car_model = load_stl_model("data/gta2kcar.stl");
-    }
-    bil->model = car_model;
-}
-
-static void init_car(struct car *bil) {
-    // Ladda en standard bil...
-
-    car_set_model(bil);
-
-    /* FIXME: CARSIZE can (should?) theoretically be replaced by values
-     *  calculated from the model's min/max values.
-     */
-    bil->o.size_x=CARSIZE_X;
-    bil->o.size_y=CARSIZE_Y;
-    bil->o.size_z=CARSIZE_Z;
-    object_update_circle(&(bil->o));
-
-    bil->helhet=100;
-
-    bil->o.x=10;
-    bil->o.y=10;
-    bil->o.z=BSIZE + CARSIZE_Z / 2; // Ska nog inte initialiseras här..
-
-    bil->t1=1;
-    bil->t2=1;
-    bil->t3=1;
-    bil->t4=1;
-
-    bil->maxspeed=2.0f;
-    bil->o.speed=0.0f;
-    bil->accspeed=0.20f;
-    bil->maxbspeed=-1.0f;
-    bil->bromsspeed=0.3f;
-    bil->speeddown=0.10f;
-    // Orginal värdet
-    // bil->turnspeed=6;
-    // Nytt värde, den svänger trotsallt lite segt...
-    bil->turnspeed=8;
-
-    bil->o.angle=0;
-
-    bil->Points=0;
-
-}
-
-static void car_render(struct car *bil) {
-
-    glPushMatrix();
-
-    glTranslatef(bil->o.x, bil->o.y, bil->o.z);
-    glRotatef((float)bil->o.angle,0.0f,0.0f,1.0f);
-
-    glBindTexture(GL_TEXTURE_2D,world.texIDs[bil->t1]);
-    draw_stl_model(bil->model);
-
-    glPopMatrix();
-}
 
 static int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 {
@@ -577,6 +350,31 @@ static int LoadLevel()
 	map_cube(world, world.nrcubex/2, world.nrcubey/2, 1).texturenr=10;
 	map_cube(world, world.nrcubex/2, world.nrcubey/2, 1).o.z = BSIZE * 2 * 2;
 
+        /* FIXME: Fult */
+        for(loop1=0;loop1<world.nrcubex;loop1++) {
+            for(loop2=0;loop2<world.nrcubey;loop2++) {
+                for(loop3=0;loop3<world.nrcubez;loop3++) {
+                    /* Bullet */
+                    plCollisionShapeHandle cube_shape;
+                    plRigidBodyHandle cube_rbody;
+                    void *user_data = NULL;
+
+                    cube_shape = plNewBoxShape(BSIZE, BSIZE, BSIZE);
+                    cube_rbody = plCreateRigidBody(user_data, 0.0f, cube_shape);
+
+                    float cube_pos[3];
+                    cube_pos[0] = map_cube(world, loop1, loop2, loop3).o.x;
+                    cube_pos[1] = map_cube(world, loop1, loop2, loop3).o.y;
+                    cube_pos[2] = map_cube(world, loop1, loop2, loop3).o.z;
+
+                    /* plVector3 == float[3] */
+                    plSetPosition(cube_rbody, cube_pos);
+
+                    plAddRigidBody(dynamics_world, cube_rbody);
+                }
+            }
+        }
+
 	return true;
 }
 
@@ -588,13 +386,15 @@ static int LoadCars()   // och gubbar.
 
 	// Kicka igång alla gubbar
 	gubbar = malloc(sizeof(struct gubbe)*nrgubbar);
+        memset(gubbar, 0, sizeof(struct gubbe)*nrgubbar);
+
+        printf("sizeof(struct gubbe): %ld\n", sizeof(struct gubbe));
 
 	int i;
 	for(i = 0; i < nrgubbar; i++) {
             init_gubbe(&gubbar[i]);
+            printf("init_gubbe: %p:\n", &gubbar[i]);
 	}
-
-        init_gubbe_displaylist();
 
 	return true;
 }
@@ -686,23 +486,40 @@ static int RespondToKeys()
 		broms_in_progress = 0;
 	}
 
-	if(keys[SDLK_LEFT]) {
-		sttmp=bil.o.speed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och
-		if(brakepressed)
-			sttmp+=0.7f;
+	/* if(keys[SDLK_LEFT]) { */
+	/* 	sttmp=bil.o.speed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och */
+	/* 	if(brakepressed) */
+	/* 		sttmp+=0.7f; */
 
-		if(bil.o.speed!=0.0f)
-			bil.o.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
-	}
+	/* 	if(bil.o.speed!=0.0f) */
+	/* 		bil.o.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går. */
+	/* } */
 
-	if(keys[SDLK_RIGHT]) {
-		sttmp=bil.o.speed/bil.maxspeed;
-		if(brakepressed)
-			sttmp+=0.7f;
+	/* if(keys[SDLK_RIGHT]) { */
+	/* 	sttmp=bil.o.speed/bil.maxspeed; */
+	/* 	if(brakepressed) */
+	/* 		sttmp+=0.7f; */
 
-		if(bil.o.speed!=0.0f)
-			bil.o.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
-	}
+	/* 	if(bil.o.speed!=0.0f) */
+	/* 		bil.o.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går. */
+	/* } */
+
+
+        if(keys[SDLK_RIGHT]) {
+            plVector3 force, rel_pos;
+            force[0] = 25.0f; force[1] = 0.0f; force[2] = 0.0f;
+            rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
+
+            plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+        }
+        if(keys[SDLK_LEFT]) {
+            plVector3 force, rel_pos;
+            force[0] = -25.0f; force[1] = 0.0f; force[2] = 0.0f;
+            rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
+
+            plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+        }
+
 
 	if(bil.helhet==0) {
 		if(keys[SDLK_RETURN]) {
@@ -719,16 +536,51 @@ static int RespondToKeys()
 		}
 	}
 
+        if(bil.helhet) {
+            if(keys[SDLK_UP]) {
+                printf("up\n");
 
-	if(!(bil.helhet==0)) {
-		if(keys[SDLK_UP]) {
-			bil.o.speed=bil.o.speed+bil.accspeed;
-		}
+                plVector3 force, rel_pos;
+                force[0] = 0.0f; force[1] = 25.0f; force[2] = 0.0f;
+                rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
 
-		if(keys[SDLK_DOWN]) {
-			bil.o.speed=bil.o.speed-bil.accspeed;
-		}
-	}
+                plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+                printf("Acting on %p\n", bil.bt_rbody);
+            } else if(keys[SDLK_DOWN]) {
+                printf("ner\n");
+
+                plVector3 force, rel_pos;
+                force[0] = 0.0f; force[1] = -25.0f; force[2] = 0.0f;
+                rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
+
+                plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+            }
+        }
+
+        if(keys[SDLK_u]) {
+            plVector3 force, rel_pos;
+            force[0] = 0.0f; force[1] = 0.0f; force[2] = 50.0f;
+            rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
+
+            plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+        }
+        if(keys[SDLK_n]) {
+            plVector3 force, rel_pos;
+            force[0] = 0.0f; force[1] = 0.0f; force[2] = -50.0f;
+            rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
+
+            plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+        }
+
+	/* if(!(bil.helhet==0)) { */
+	/* 	if(keys[SDLK_UP]) { */
+	/* 		bil.o.speed=bil.o.speed+bil.accspeed; */
+	/* 	} */
+
+	/* 	if(keys[SDLK_DOWN]) { */
+	/* 		bil.o.speed=bil.o.speed-bil.accspeed; */
+	/* 	} */
+	/* } */
 
 	if(keys[SDLK_TAB]) {
 		sound_cont_play(tut);
@@ -791,200 +643,6 @@ static int RespondToKeys()
 
 
 	// NÄTVERKSSAK BORTTAGEN
-
-	return true;
-}
-
-static int CalcGameVars()
-{
-
-	// Tar hand om hastigheten...
-	if(bil.o.speed>bil.maxspeed)
-		bil.o.speed=bil.maxspeed;
-
-	if(bil.o.speed<bil.maxbspeed)
-		bil.o.speed=bil.maxbspeed;
-
-	if(bil.o.speed<0.0f && bil.o.speed>-bil.speeddown)
-		bil.o.speed=0.0f;
-	if(bil.o.speed>0.0f && bil.o.speed<bil.speeddown)
-		bil.o.speed=0.0f;
-
-	if(bil.o.speed>0)
-		bil.o.speed=bil.o.speed-bil.speeddown;
-	if(bil.o.speed<0)
-		bil.o.speed=bil.o.speed+bil.speeddown;
-
-
-	if(bil.o.angle<0)
-		bil.o.angle=bil.o.angle+360;
-	if(bil.o.angle>359)
-		bil.o.angle=bil.o.angle-360;
-
-
-	// Svänger bilen så att den åker åt rätt håll
-
-	float tmpx=0.0f,tmpy=0.0f;
-
-	object_forward(&bil.o);
-
-	///////////////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////////////
-	///			Styr även nätverksbilarna...						 //
-	///////////////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////////////
-
-	//NÄTVERKSSAK BORTTAGEN
-
-
-
-	// Styr de datorkontrollerade gubbarna (och senare även bilar?)
-	// ----------------------------------------------------
-	// Nej, jag har bestämt mig. Vi stänger av gubbarna när vi kör med networch...
-
-	if(!Network) {
-		int i;
-		for(i=0;i<nrgubbar;i++) {
-			gubbe_move(&gubbar[i]);
-		}
-
-	}	//!Network
-
-
-
-
-
-	// Nu är det kollisiondetection som gäller här...
-	// För att inte göra det för svårt, gör vi bara kuber med ett z:a värde på 0.0f åkbara...
-
-	// Kontrollera så att den inte krockar med en kuuub...
-	/* -------------------------------------------------------------
-	   HÄÄÄÄR ÄR DET VIIIKTIGAST JUST NUUUUUU!!!!!!!!!!!!!!!!!!
-	   ------------------------------------------------------------ */
-
-	/////////////////////////////////////////////////////////////////////////////////
-	/// EINAR!!! Det här kommer ju att dra lika mycket CPU som... jag vet inte vad...
-	/////////////////////////////////////////////////////////////////////////////////
-
-
-	int loop1 = 0, loop2 = 0;
-
-
-	// Det kan tyckas vara onödigt att kolla alla kuber på banan... fixa så att den kollar bara de närmaste...
-	// kontrollera så att inte bilen krockar med en stor KUUB!
-	for(loop1=0 ;loop1<world.nrcubex;loop1++) {
-		for(loop2=0;loop2<world.nrcubey;loop2++) {
-			if (object_colliding(&(map_cube(world, loop1, loop2, 0).o), &bil.o)) {
-				player.krockar++;
-
-				int damage = abs((int)(bil.o.speed*5));
-				if (damage) {
-					sound_play(krasch);
-
-					bil.helhet -= damage;
-					if (bil.helhet <= 0) {
-						bil.helhet = 0;
-						bil.t1=14;
-					}
-				}
-				object_backward(&bil.o);
-				bil.o.speed = 0;
-				loop1=world.nrcubex; loop2=world.nrcubey; // XXX: ugly exit
-			}
-		}
-	}
-
-
-	// Om vi spelar nätverk, så ska vi även dra CPU på att kolla om andra bilen har krockat...
-	/////////////////////////////////////////////////////////////////////////////////////////
-	// Detta är alltså nätverksbilen som kollas emot krockar!!!!
-
-	//NÄTVERKSSAK BORTTAGEN
-
-
-	// Kolla så att inte de små bilbananerna krockar med varandra...
-
-	//NÄTVERKSSAK BORTTAGEN
-
-
-
-
-	// Kolla så att inte gubbarna krockar med bilen...
-	// Vi lägger detta före de andra gubb grejjerna, för att jag kanske knuffar lite på gubbarna här...
-
-	if(!Network) {
-
-		for(loop1=0; loop1<nrgubbar; loop1++) {
-			if (!gubbar[loop1].alive)
-				continue;
-
-			if (object_colliding(&gubbar[loop1].o, &bil.o)) {
-				if(bil.o.speed>0.4f || bil.o.speed<-0.4f) {
-					gubbar[loop1].alive=false;
-
-					struct timeval tv;
-					gettimeofday(&tv, NULL);
-					if(tv.tv_usec % 2)
-						sound_play(aj0);
-					else
-						sound_play(aj1);
-					player.runovers++;
-				} else {
-					object_backward(&(gubbar[loop1].o));
-					gubbar[loop1].o.angle+=180;
-					sound_play(move);
-				}
-			}
-
-		}
-
-		// Se till så att inte gubbarna krockar med sig själva
-		// denna funktion kan optimeras tusenfalt!!
-		// Men det värsta måste väl vara att den inte fungerar...
-		// Orkar inte krångla med den nu, jag vill få igång lite roliga saker...
-
-		//TRASIG GUBBSAK BORTTAGEN
-
-		// Se till så att inte gubbarna krockar med nåt väggaktigt...
-		// Fungerar, men vad som händer med gubbarna behöver absolut finjusteras...
-
-		// Oj, oj, oj... precis när jag trodde att jag nått CPU toppen för en liten funktion...
-                int loop2, loop3;
-		for (loop3=0 ;loop3<nrgubbar; loop3++) {
-			for (loop1=0 ;loop1<world.nrcubex;loop1++) {
-				for (loop2=0;loop2<world.nrcubey;loop2++) {
-					if (!gubbar[loop3].alive)
-						continue;
-
-					if (object_colliding(&(map_cube(world, loop1, loop2, 0).o), &gubbar[loop3].o)) {
-						object_backward(&gubbar[loop3].o);
-						gubbar[loop3].o.angle+=60;
-					}
-				}
-			}
-		}
-	} // !Network
-	/* -----------------------------------------------------------------*/
-
-	bil.o.x+=tmpx;
-	bil.o.y+=tmpy;
-
-        camera_move_for_car(&bil);
-
-	// Debugging grejjer!
-
-	if(debugBlend)
-		blendcolor+=0.1f;
-	else
-		blendcolor-=0.1f;
-
-	if(blendcolor>0.4f)
-		blendcolor=0.4f;
-	if(blendcolor<0.0f)
-		blendcolor=0.0f;
-
-
-
 
 	return true;
 }
@@ -1337,6 +995,11 @@ int main(int argc, char *argv[])
 
 	parse_options(argc, argv);
 
+        /* Bullet */
+        physics_sdk = plNewBulletSdk();
+        dynamics_world = plCreateDynamicsWorld(physics_sdk);
+        plDynamicsWorld_SetGravity(dynamics_world, 0, 0, -30.0f);
+
 	// C++ SUGER SÅ MYCKET!!!1
 	world.nrcubex = 20;
 	world.nrcubey = 20;
@@ -1417,6 +1080,8 @@ int main(int argc, char *argv[])
 
 	while(!done)
 	{
+		/* Bullet */
+		plStepSimulation(dynamics_world, 1.0f/60.0f);
 
 		TimerTicks=SDL_GetTicks();
 		if(CheckaEvents()==1) {
@@ -1428,7 +1093,7 @@ int main(int argc, char *argv[])
                         done = 1;
                 }
 
-		CalcGameVars();
+                camera_move_for_car(&bil);
 
 		DrawGLScene();
                 hud_render();
