@@ -104,6 +104,9 @@ void init_car(struct car *bil) {
     void *user_data = NULL; /* ? */
     bil->bt_shape = plNewBoxShape(CARSIZE_X/2.0f, CARSIZE_Y/2.0f, CARSIZE_Z/2.0f);
 
+    bil->engineForce = bil->brakeForce = bil->steering = 0;
+
+
     bil->rotation[0] = 1.0f; bil->rotation[1] = 0.0f; bil->rotation[2] = 0.0f; bil->rotation[3] = 0.0f;
     bil->rotation[4] = 0.0f; bil->rotation[5] = 1.0f; bil->rotation[6] = 0.0f; bil->rotation[7] = 0.0f;
     bil->rotation[8] = 0.0f; bil->rotation[9] = 0.0f; bil->rotation[10] = 1.0f; bil->rotation[11] = 0.0f;
@@ -113,6 +116,25 @@ void init_car(struct car *bil) {
                                                   &car_get_world_transform,
                                                   &car_set_world_transform,
                                                   bil);
+
+    plRigidBody_SetActivationState(bil->bt_rbody, DISABLE_DEACTIVATION);
+
+    /* Make it into a proper vehicle */
+    plVehicleTuningHandle vehicle_tuning = plNewVehicleTuning();
+    plVehicleRayCasterHandle vehicle_raycaster = plNewDefaultVehicleRaycaster(dynamics_world);
+    /* plRaycastVehicleHandle */ bil->bt_vehicle = plNewRaycastVehicle(vehicle_tuning, bil->bt_rbody, vehicle_raycaster);
+
+    plDynamicsWorld_AddVehicle(dynamics_world, bil->bt_vehicle);
+
+    /* Shared wheel data */
+    plVector3 wheelDirection = {0, 0, -1};
+    plVector3 wheelAxle = {1, 0, 0};
+    plReal suspensionRestLength = 0.5f;
+    plReal wheelRadius = 1.0f;
+
+    /* Add first wheel */
+    plVector3 cPoint0 = {0, -5, 0};
+    plRaycastVehicle_AddWheel(bil->bt_vehicle, cPoint0, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, vehicle_tuning, 1 /* frontWheel */);
 
     plAddRigidBody(dynamics_world, bil->bt_rbody);
     printf("Added %p\n", bil->bt_rbody);

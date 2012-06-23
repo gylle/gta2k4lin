@@ -100,6 +100,13 @@ plRigidBodyHandle plCreateRigidBodyWithCallback(void* user_data, float mass, plC
 	return (plRigidBodyHandle) body;
 }
 
+void plRigidBody_SetActivationState(plRigidBodyHandle rbHandle, int state)
+{
+    btRigidBody *body = reinterpret_cast<btRigidBody*>(rbHandle);
+
+    body->setActivationState(state);
+}
+
 void plRigidBody_ApplyForce(plRigidBodyHandle object, plVector3 force, plVector3 rel_pos)
 {
     btRigidBody *body = reinterpret_cast<btRigidBody*>(object);
@@ -113,4 +120,74 @@ void plDynamicsWorld_SetGravity(plDynamicsWorldHandle handle, plReal x, plReal y
     btDynamicsWorld* dynamicsWorld = reinterpret_cast< btDynamicsWorld* >(handle);
 
     dynamicsWorld->setGravity(btVector3(x, y, z));
+}
+
+void plDynamicsWorld_AddVehicle(plDynamicsWorldHandle wHandle, plRaycastVehicleHandle vHandle)
+{
+    btDynamicsWorld *dynamicsWorld = reinterpret_cast<btDynamicsWorld*>(wHandle);
+    btRaycastVehicle *raycastVehicle = reinterpret_cast<btRaycastVehicle*>(vHandle);
+
+    dynamicsWorld->addVehicle(raycastVehicle);
+}
+
+plVehicleRayCasterHandle plNewDefaultVehicleRaycaster(plDynamicsWorldHandle handle)
+{
+    btDynamicsWorld* dynamicsWorld = reinterpret_cast<btDynamicsWorld*>(handle);
+
+    void *mem = btAlignedAlloc(sizeof(btDefaultVehicleRaycaster),16);
+    return (plVehicleRayCasterHandle)new (mem)btDefaultVehicleRaycaster(dynamicsWorld);
+}
+
+plVehicleTuningHandle plNewVehicleTuning() {
+    void *mem = btAlignedAlloc(sizeof(btRaycastVehicle::btVehicleTuning),16);
+    return (plVehicleTuningHandle)new (mem)btRaycastVehicle::btVehicleTuning();
+}
+
+plRaycastVehicleHandle plNewRaycastVehicle(plVehicleTuningHandle tHandle,
+                                           plRigidBodyHandle rHandle,
+                                           plVehicleRayCasterHandle rcHandle)
+{
+    btRaycastVehicle::btVehicleTuning *tuning = reinterpret_cast<btRaycastVehicle::btVehicleTuning*>(tHandle);
+    btRigidBody *rigidBody = reinterpret_cast<btRigidBody*>(rHandle);
+    btVehicleRaycaster *raycaster = reinterpret_cast<btDefaultVehicleRaycaster*>(rcHandle);
+
+    void *mem = btAlignedAlloc(sizeof(btRaycastVehicle), 16);
+    return (plRaycastVehicleHandle)new (mem)btRaycastVehicle(*tuning, rigidBody, raycaster);
+}
+
+void plRaycastVehicle_SetCoordinateSystem(plRaycastVehicleHandle vHandle, int rightIndex, int upIndex, int forwardIndex)
+{
+    btRaycastVehicle *vehicle = reinterpret_cast<btRaycastVehicle*>(vHandle);
+    vehicle->setCoordinateSystem(rightIndex, upIndex, forwardIndex);
+}
+
+void plRaycastVehicle_AddWheel(plRaycastVehicleHandle vHandle, plVector3 cPoint, plVector3 wDirection,
+                               plVector3 wAxleCS, plReal suspensionRestLength, plReal wheelRadius,
+                               plVehicleTuningHandle tHandle, int isFrontWheel)
+{
+    btRaycastVehicle *vehicle = reinterpret_cast<btRaycastVehicle*>(vHandle);
+    btRaycastVehicle::btVehicleTuning *tuning = reinterpret_cast<btRaycastVehicle::btVehicleTuning*>(tHandle);
+
+    vehicle->addWheel(btVector3(cPoint[0], cPoint[1], cPoint[2]),
+                      btVector3(wDirection[0], wDirection[1], wDirection[2]),
+                      btVector3(wAxleCS[0], wAxleCS[1], wAxleCS[2]),
+                      suspensionRestLength, wheelRadius, *tuning, isFrontWheel);
+}
+
+void plRaycastVehicle_ApplyEngineForce(plRaycastVehicleHandle vHandle, plReal engineForce, int wheelIndex)
+{
+    btRaycastVehicle *vehicle = reinterpret_cast<btRaycastVehicle*>(vHandle);
+    vehicle->applyEngineForce(engineForce, wheelIndex);
+}
+
+void plRaycastVehicle_SetBrake(plRaycastVehicleHandle vHandle, plReal breakingForce, int wheelIndex)
+{
+    btRaycastVehicle *vehicle = reinterpret_cast<btRaycastVehicle*>(vHandle);
+    vehicle->setBrake(breakingForce, wheelIndex);
+}
+
+void plRaycastVehicle_SetSteeringValue(plRaycastVehicleHandle vHandle, plReal steering, int wheelIndex)
+{
+    btRaycastVehicle *vehicle = reinterpret_cast<btRaycastVehicle*>(vHandle);
+    vehicle->setSteeringValue(steering, wheelIndex);
 }

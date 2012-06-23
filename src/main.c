@@ -486,38 +486,22 @@ static int RespondToKeys()
 		broms_in_progress = 0;
 	}
 
-	/* if(keys[SDLK_LEFT]) { */
-	/* 	sttmp=bil.o.speed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och */
-	/* 	if(brakepressed) */
-	/* 		sttmp+=0.7f; */
+        if(keys[SDLK_RIGHT] || keys[SDLK_LEFT]) {
+            if(keys[SDLK_RIGHT]) {
+                bil.steering += 0.02f;
+            } else if(keys[SDLK_LEFT]) {
+                bil.steering -= 0.02f;
+            }
 
-	/* 	if(bil.o.speed!=0.0f) */
-	/* 		bil.o.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går. */
-	/* } */
+            if(bil.steering > 1.0f)
+                bil.steering = 1.0f;
+            else if(bil.steering < -1.0f)
+                bil.steering = -1.0f;
 
-	/* if(keys[SDLK_RIGHT]) { */
-	/* 	sttmp=bil.o.speed/bil.maxspeed; */
-	/* 	if(brakepressed) */
-	/* 		sttmp+=0.7f; */
+        } else {
 
-	/* 	if(bil.o.speed!=0.0f) */
-	/* 		bil.o.angle-=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går. */
-	/* } */
-
-
-        if(keys[SDLK_RIGHT]) {
-            plVector3 force, rel_pos;
-            force[0] = 25.0f; force[1] = 0.0f; force[2] = 0.0f;
-            rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
-
-            plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
-        }
-        if(keys[SDLK_LEFT]) {
-            plVector3 force, rel_pos;
-            force[0] = -25.0f; force[1] = 0.0f; force[2] = 0.0f;
-            rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
-
-            plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+            /* Go straight */
+            bil.steering *= 0.05f;
         }
 
 
@@ -538,24 +522,24 @@ static int RespondToKeys()
 
         if(bil.helhet) {
             if(keys[SDLK_UP]) {
-                printf("up\n");
-
-                plVector3 force, rel_pos;
-                force[0] = 0.0f; force[1] = 25.0f; force[2] = 0.0f;
-                rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
-
-                plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
-                printf("Acting on %p\n", bil.bt_rbody);
+                bil.engineForce += 1.0f;
             } else if(keys[SDLK_DOWN]) {
-                printf("ner\n");
-
-                plVector3 force, rel_pos;
-                force[0] = 0.0f; force[1] = -25.0f; force[2] = 0.0f;
-                rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
-
-                plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+                bil.engineForce -= 1.0f;
+            } else {
+                bil.engineForce *= 0.1f;
             }
+
+
+            if(bil.engineForce > 10.0f)
+                bil.engineForce = 50.0f;
+
         }
+
+        /* FIXME */
+        plRaycastVehicle_ApplyEngineForce(bil.bt_vehicle, bil.engineForce, 0);
+        plRaycastVehicle_SetBrake(bil.bt_vehicle, bil.brakeForce, 0);
+        plRaycastVehicle_SetSteeringValue(bil.bt_vehicle, bil.steering, 0);
+
 
         if(keys[SDLK_u]) {
             plVector3 force, rel_pos;

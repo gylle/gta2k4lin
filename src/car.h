@@ -24,7 +24,10 @@ struct car {
 
 	plCollisionShapeHandle bt_shape;
 	plRigidBodyHandle bt_rbody;
+	plRaycastVehicleHandle bt_vehicle;
+
 	float rotation[16];
+	float engineForce, brakeForce, steering;
 };
 
 void init_car(struct car *bil);
