@@ -85,22 +85,11 @@ void init_car(struct car *bil) {
     bil->t3=1;
     bil->t4=1;
 
-    bil->maxspeed=2.0f;
-    bil->o.speed=0.0f;
-    bil->accspeed=0.20f;
-    bil->maxbspeed=-1.0f;
-    bil->bromsspeed=0.3f;
-    bil->speeddown=0.10f;
-    // Orginal värdet
-    // bil->turnspeed=6;n
-    // Nytt värde, den svänger trotsallt lite segt...
-    bil->turnspeed=8;
-
     bil->o.angle=0;
 
     bil->Points=0;
 
-    float bt_weight = 1.0f;
+    float bt_weight = 50.0f;
     void *user_data = NULL; /* ? */
     bil->bt_shape = plNewBoxShape(CARSIZE_X/2.0f, CARSIZE_Y/2.0f, CARSIZE_Z/2.0f);
 
@@ -130,11 +119,19 @@ void init_car(struct car *bil) {
     plVector3 wheelDirection = {0, 0, -1};
     plVector3 wheelAxle = {1, 0, 0};
     plReal suspensionRestLength = 0.5f;
-    plReal wheelRadius = 1.0f;
+    plReal wheelRadius = 0.5f;
 
-    /* Add first wheel */
-    plVector3 cPoint0 = {0, -5, 0};
+    /* Add wheels */
+    plVector3 cPoint0 = {-(CARSIZE_X/2.0f - 0.1f), (CARSIZE_Y/2.0f - 0.1f), -(CARSIZE_Z/2.0f - 0.1f)}; /* Front */
+    plVector3 cPoint1 = {(CARSIZE_X/2.0f - 0.1f), (CARSIZE_Y/2.0f - 0.1f), -(CARSIZE_Z/2.0f - 0.1f)};
+    plVector3 cPoint2 = {-(CARSIZE_X/2.0f - 0.1f), -(CARSIZE_Y/2.0f - 0.1f), -(CARSIZE_Z/2.0f - 0.1f)}; /* Back */
+    plVector3 cPoint3 = {(CARSIZE_X/2.0f - 0.1f), -(CARSIZE_Y/2.0f - 0.1f), -(CARSIZE_Z/2.0f - 0.1f)};
+
+
     plRaycastVehicle_AddWheel(bil->bt_vehicle, cPoint0, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, vehicle_tuning, 1 /* frontWheel */);
+    plRaycastVehicle_AddWheel(bil->bt_vehicle, cPoint1, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, vehicle_tuning, 1 /* frontWheel */);
+    plRaycastVehicle_AddWheel(bil->bt_vehicle, cPoint2, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, vehicle_tuning, 0 /* backWheel */);
+    plRaycastVehicle_AddWheel(bil->bt_vehicle, cPoint3, wheelDirection, wheelAxle, suspensionRestLength, wheelRadius, vehicle_tuning, 0 /* backWheel */);
 
     plAddRigidBody(dynamics_world, bil->bt_rbody);
     printf("Added %p\n", bil->bt_rbody);

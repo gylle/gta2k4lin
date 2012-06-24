@@ -459,44 +459,32 @@ static int InitGL(int width, int height) //		 All Setup For OpenGL Goes Here
 
 static int RespondToKeys()
 {
-
-	float sttmp;
-	bool brakepressed=false;
         static int broms_in_progress = 0;
 
 	if(keys[SDLK_SPACE]) {
-		brakepressed=true;
-		if(bil.o.speed<0.0f && bil.o.speed>-bil.bromsspeed)
-			bil.o.speed=0.0f;
-		if(bil.o.speed>0.0f && bil.o.speed<bil.bromsspeed)
-			bil.o.speed=0.0f;
+		bil.brakeForce = 200.0f;
 
 		if (!broms_in_progress) {
 			sound_play(broms);
 			broms_in_progress = 1;
 		}
-
-		if(bil.o.speed<0.0f)
-			bil.o.speed+=bil.bromsspeed;
-		if(bil.o.speed>0.0f)
-			bil.o.speed-=bil.bromsspeed;
-
 	}
 	else {
 		broms_in_progress = 0;
+		bil.brakeForce = 0.0f;
 	}
 
         if(keys[SDLK_RIGHT] || keys[SDLK_LEFT]) {
             if(keys[SDLK_RIGHT]) {
-                bil.steering += 0.02f;
+                bil.steering -= 0.2f;
             } else if(keys[SDLK_LEFT]) {
-                bil.steering -= 0.02f;
+                bil.steering += 0.2f;
             }
 
-            if(bil.steering > 1.0f)
-                bil.steering = 1.0f;
-            else if(bil.steering < -1.0f)
-                bil.steering = -1.0f;
+            if(bil.steering > 0.6f)
+                bil.steering = 0.6f;
+            else if(bil.steering < -0.6f)
+                bil.steering = -0.6f;
 
         } else {
 
@@ -522,23 +510,25 @@ static int RespondToKeys()
 
         if(bil.helhet) {
             if(keys[SDLK_UP]) {
-                bil.engineForce += 1.0f;
+                bil.engineForce += 40.0f;
             } else if(keys[SDLK_DOWN]) {
-                bil.engineForce -= 1.0f;
+                bil.engineForce -= 40.0f;
             } else {
                 bil.engineForce *= 0.1f;
             }
 
-
-            if(bil.engineForce > 10.0f)
-                bil.engineForce = 50.0f;
-
+            if(bil.engineForce > 1000.0f)
+                bil.engineForce = 1000.0f;
         }
 
         /* FIXME */
-        plRaycastVehicle_ApplyEngineForce(bil.bt_vehicle, bil.engineForce, 0);
-        plRaycastVehicle_SetBrake(bil.bt_vehicle, bil.brakeForce, 0);
+        plRaycastVehicle_ApplyEngineForce(bil.bt_vehicle, bil.engineForce, 2);
+        plRaycastVehicle_ApplyEngineForce(bil.bt_vehicle, bil.engineForce, 3);
+        plRaycastVehicle_SetBrake(bil.bt_vehicle, bil.brakeForce, 2);
+        plRaycastVehicle_SetBrake(bil.bt_vehicle, bil.brakeForce, 3);
+
         plRaycastVehicle_SetSteeringValue(bil.bt_vehicle, bil.steering, 0);
+        plRaycastVehicle_SetSteeringValue(bil.bt_vehicle, bil.steering, 1);
 
 
         if(keys[SDLK_u]) {
@@ -555,16 +545,6 @@ static int RespondToKeys()
 
             plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
         }
-
-	/* if(!(bil.helhet==0)) { */
-	/* 	if(keys[SDLK_UP]) { */
-	/* 		bil.o.speed=bil.o.speed+bil.accspeed; */
-	/* 	} */
-
-	/* 	if(keys[SDLK_DOWN]) { */
-	/* 		bil.o.speed=bil.o.speed-bil.accspeed; */
-	/* 	} */
-	/* } */
 
 	if(keys[SDLK_TAB]) {
 		sound_cont_play(tut);
@@ -612,21 +592,6 @@ static int RespondToKeys()
             printf("Escape tryckt, avslutar...\n");
             return false;
         }
-
-	// Nu vet vi precis vilka knappar som var pressade...
-	// Då skickar vi strängen PressedB, och tar emot mPressedB
-	// Hmm, det här var snabbare än mitt förra sätt, men jag tycker att det borde finnas ännu snabbare sätt att
-	// Skicka data på... Undrar hur quake fungerar, tex... :)
-
-
-	// NÄTVERKSSAK BORTTAGEN.
-
-	///////////////////////////////////////////////////////////
-	// Beräkna samma saker fast för den andra bilen!! ////////////////////////77
-	/////////////////////////////////////////////////////////////////////////////
-
-
-	// NÄTVERKSSAK BORTTAGEN
 
 	return true;
 }
