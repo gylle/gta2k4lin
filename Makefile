@@ -44,13 +44,11 @@ dist:
 depend:
 	make -B Makefile.depend
 
-src/btwrap.o:
-	$(CXX) -c -o src/btwrap.o src/btwrap.cpp $(CFLAGS)
-
 gta2k4lin: src/main.o src/sound.o src/network.o src/hud.o src/lmq.o src/object.o src/stl.o src/car.o src/gubbe.o src/btwrap.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 Makefile.depend: $(CXX_SOURCES) $(C_SOURCES)
 	$(CC) -MM $(CFLAGS) $^ > Makefile.depend
+	$(CXX) -MM $(CXXFLAGS) $^ >> Makefile.depend
 
 include Makefile.depend
