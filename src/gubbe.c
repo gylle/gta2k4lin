@@ -11,33 +11,33 @@ static const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i f
 static GLuint GubbeDispList = 0;
 
 static float gubbe_top_vertices[] = {
-    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 0.0f, 0.0f,
-    -GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 0.0f, 1.0f,
-    GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 1.0f, 1.0f,
-    GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 1.0f, 0.0f
+    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
+    -GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
+    GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 1.0f,
+    GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 0.0f
 };
 
 static float gubbe_body_vertices[] = {
     /* Left */
-    -GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE, 0.0f, 0.0f,
-    -GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 0.0f, 1.0f,
-    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z,1.0f, 1.0f,
-    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE,1.0f, 0.0f,
+    -GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
+    -GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
+    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f,1.0f, 1.0f,
+    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f,1.0f, 0.0f,
     /* Right */
-    GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE, 0.0f, 0.0f,
-    GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 0.0f, 1.0f,
-    GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 1.0f, 1.0f,
-    GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE, 1.0f, 0.0f,
+    GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
+    GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
+    GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 1.0f,
+    GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 1.0f, 0.0f,
     /* Front */
-    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE, 0.0f, 0.0f,
-    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 0.0f, 1.0f,
-    GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 1.0f, 1.0f,
-    GUBBSIZE_X/2, -GUBBSIZE_Y/2, BSIZE, 1.0f, 0.0f,
+    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
+    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
+    GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 1.0f,
+    GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 1.0f, 0.0f,
     /* Back */
-    GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE, 0.0f, 0.0f,
-    GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 0.0f, 1.0f,
-    -GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE+GUBBSIZE_Z, 1.0f, 1.0f,
-    -GUBBSIZE_X/2, GUBBSIZE_Y/2, BSIZE, 1.0f, 0.0f
+    GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
+    GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
+    -GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 1.0f,
+    -GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 1.0f, 0.0f
 };
 
 static void gubbe_get_world_transform(void *data, plVector3 v, plReal *m) {
@@ -92,7 +92,7 @@ void init_gubbe(struct gubbe *g) {
     g->o.y=(float)((rand() % world.nrcubey*BSIZE*2)*100)/100.0f;
     g->o.angle=rand() % 360;
 
-    g->o.z=BSIZE + GUBBSIZE_Z / 2 + 1.0f;
+    g->o.z = BSIZE + GUBBSIZE_Z/2.0f + 0.1f;
 
     g->ltexture=11;
     g->ltexture2=13;
@@ -138,7 +138,7 @@ void gubbe_render(struct gubbe *g) {
     glPushMatrix();
 
     // HAHA!!! Det gick till slut! :)
-    glTranslatef(g->o.x,g->o.y,0);
+    glTranslatef(g->o.x,g->o.y,g->o.z);
     /* glRotatef((float)g->o.angle,0.0f,0.0f,1.0f); */
     glMultMatrixf(g->rotation);
 
