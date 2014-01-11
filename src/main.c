@@ -20,30 +20,15 @@
  *
  */
 
-// gta 2000... :) (Inte officielt namn)
-// Detta ska föreställa linux porten...
 
-
-
-//////////////////////////////////////////////////////////////////////////
-//		KATASTROF::		Koden blir mer och mer ostrukturerad			//
-//						Oklart hur länge det går att fatta nåt av den :)//
-//////////////////////////////////////////////////////////////////////////
-
-
-
-/*		This program is made by skatteola. It uses
- *		alot of code from the site nehe.gamedev.com
- *		That is because I am still learning, and I
- *		think that this code is really good to start with.
- *		The original "disclamer" follows:
- *	--------------------------------------------------------
- *
- *		This Code Was Created By Jeff Molofee 2000
- *		A HUGE Thanks To Fredric Echols For Cleaning Up
- *		And Optimizing This Code, Making It More Flexible!
- *		If You've Found This Code Useful, Please Let Me Know.
- *		Visit My Site At nehe.gamedev.net
+/* Some code originally from nehe.gamedev.com,
+ * original notice as follows:
+ * -------------------------------------------------------
+ * This Code Was Created By Jeff Molofee 2000
+ * A HUGE Thanks To Fredric Echols For Cleaning Up
+ * And Optimizing This Code, Making It More Flexible!
+ * If You've Found This Code Useful, Please Let Me Know.
+ * Visit My Site At nehe.gamedev.net
  */
 
 #include <unistd.h>
@@ -86,9 +71,6 @@ bool NoBlend=true;
 bool sound = true;
 int sound_music = 1;
 
-// Iallafall så är stommen för nätverket laggd...
-// Hmmm, det tar sig...
-
 // Enable:as bara ifall man ska försöka få igång nätverket...
 bool Network=false;			// Nätverk eller singelplayer...
 
@@ -97,20 +79,11 @@ unsigned server_port = 9378;
 char *nick = NULL;
 int proto_only = 0;
 
-
-
-// Skaffa FPS räknare... hur ska man gööra?
-
-
 bool debugBlend=false;
 float blendcolor;
 
 
 
-
-
-
-// Fina spel grejjer!
 struct cube {
 	// Vilken textur som ska mappas till kuben...
 	int texturenr;
@@ -168,36 +141,28 @@ static void camera_move_for_car(struct car *car) {
 }
 
 struct gubbe {
-	// Texturer. ltexture2=huvudet. ltexture=resten. dtexturer=texture då gubben dött...
 	int ltexture, ltexture2,  dtexture;
-	// Fartsaker...
 	float maxspeed,maxbspeed,accspeed;
-	// Lever?
 	bool alive;
-	// Tid tills han lever igen...
+
+	// Time to respawn
 	int atimer;
 
 	struct object o;
 };
-const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
+const int gubbe_respawn_frames=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
+
 GLuint	GubbeDispList = 0;
 
 struct spelare {
-	// Poäng
 	int points;
-	// Krockar
 	int krockar;
-	// Överkörda människor
 	int runovers;
 };
 
 struct gubbe *gubbar; //[nrgubbar];
 
 struct spelare player;
-
-
-
-// Storleken på banan skulle behövas laddas in från en fil, men för tillfället vet jag inte riktigt hur det skulle gå till...
 
 struct world {
 	int nrcubex;
@@ -254,8 +219,6 @@ static void init_gubbe(struct gubbe *g) {
     g->accspeed=0.15f;
     g->maxbspeed=0.2f;
 
-    //g->o.angle=0;
-
     g->o.size_x=GUBBSIZE_X;
     g->o.size_y=GUBBSIZE_Y;
     g->o.size_z=GUBBSIZE_Z;
@@ -275,16 +238,13 @@ static void init_gubbe(struct gubbe *g) {
 }
 
 static void gubbe_move(struct gubbe *g) {
-    // den här funktionen som bestämmer vad gubbarna ska göra måste skrivas om,
-    // Gubbarna är totalt urblåsta.
-
     if(g->alive) {
-        int tmprand=rand() % 100; // Ejjj, det wooorkar...
+        int tmprand=rand() % 100;
 
-        if(tmprand==0 && tmprand<3)  // gubben ska bara vrida sig fååå gånger..
+        if(tmprand==0 && tmprand<3)
             g->o.angle+=10;
 
-        if(tmprand>=3 && tmprand<5)  // Ge även möjligheten att vända åt andra hållet...
+        if(tmprand>=3 && tmprand<5)
             g->o.angle-=10;
 
         if(tmprand>=5 && tmprand<=100)
@@ -295,7 +255,7 @@ static void gubbe_move(struct gubbe *g) {
     } else {
         g->atimer++;
 
-        if(g->atimer>=gubbtid) {   // Jag antar att man borde randomiza ut platsen igen...
+        if(g->atimer>=gubbe_respawn_frames) {
             g->atimer=0;
             g->alive=true;
 
@@ -325,7 +285,6 @@ static void gubbe_move(struct gubbe *g) {
 static void gubbe_render(struct gubbe *g) {
     glPushMatrix();
 
-    // HAHA!!! Det gick till slut! :)
     glTranslatef(g->o.x,g->o.y,0);
     glRotatef((float)g->o.angle,0.0f,0.0f,1.0f);
 
@@ -339,7 +298,6 @@ static void gubbe_render(struct gubbe *g) {
         if(blendcolor==0.0f)
             glDisable(GL_BLEND);
     } else {
-        // Är man överkörd står man nog inte upp längre... :) Det här blir bättre...
         glBindTexture(GL_TEXTURE_2D,world.texIDs[g->dtexture]);
 
         glTranslatef(0.0f, 0.0f, -GUBBSIZE_Z+0.01f);
@@ -349,9 +307,6 @@ static void gubbe_render(struct gubbe *g) {
 }
 
 static void init_gubbe_displaylist() {
-    /* (Bygger på att den första gubben i gubbar är initialiserad */
-
-    // Vi bygger en Display List!!! EJJJJ!!!(som i öj) :)
     GubbeDispList=glGenLists(1);
 
     glNewList(GubbeDispList,GL_COMPILE);
@@ -373,8 +328,6 @@ static void car_set_model(struct car *bil) {
 }
 
 static void init_car(struct car *bil) {
-    // Ladda en standard bil...
-
     car_set_model(bil);
 
     /* FIXME: CARSIZE can (should?) theoretically be replaced by values
@@ -402,9 +355,6 @@ static void init_car(struct car *bil) {
     bil->maxbspeed=-1.0f;
     bil->bromsspeed=0.3f;
     bil->speeddown=0.10f;
-    // Orginal värdet
-    // bil->turnspeed=6;
-    // Nytt värde, den svänger trotsallt lite segt...
     bil->turnspeed=8;
 
     bil->o.angle=0;
@@ -428,7 +378,6 @@ static void car_render(struct car *bil) {
 
 static int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 {
-
 	/* Load textures from file names in world */
 	world.texIDs = (GLuint *)calloc(world.ntextures, sizeof(GLuint));
 	if (world.texIDs == NULL) {
@@ -487,13 +436,6 @@ static int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 
 static int LoadLevel()
 {
-
-	// Används inte, borttaget för att spara plats...
-	// Humm... jag kom på att det visst används. :)
-	// Bara att kopiera tillbaks...
-
-	// LADDA IN!!!!
-	
 	// Allocate them cubes!
 	world.map = (struct cube *)calloc(world.nrcubex * world.nrcubey * world.nrcubez, sizeof(struct cube));
 	if (world.map == NULL)  {
@@ -580,7 +522,7 @@ static int LoadLevel()
 	return true;
 }
 
-static int LoadCars()   // och gubbar.
+static int LoadCars()
 {
 	camera_init(&camera);
 
@@ -617,9 +559,8 @@ static void gl_resize(int width, int height) {
     glMatrixMode( GL_MODELVIEW );
 }
 
-static int InitGL(int width, int height) //		 All Setup For OpenGL Goes Here
+static int InitGL(int width, int height)
 {
-
 	if (!LoadGLTextures())							// Jump To Texture Loading Routine ( NEW )
 	{
 		printf("Bananeinar, det verkar inte som om den vill ladda texturerna.");
@@ -737,7 +678,6 @@ static int RespondToKeys()
 		sound_cont_stop(tut, 0);
 	}
 
-	// Detta är debug grejjer/saker som inte ska vara kvar i "riktiga" versionen...
 	// Styr kameran
 	if(keys[SDLK_F5]) {
 		camera.z-=0.5f;
@@ -777,27 +717,11 @@ static int RespondToKeys()
             return false;
         }
 
-	// Nu vet vi precis vilka knappar som var pressade...
-	// Då skickar vi strängen PressedB, och tar emot mPressedB
-	// Hmm, det här var snabbare än mitt förra sätt, men jag tycker att det borde finnas ännu snabbare sätt att
-	// Skicka data på... Undrar hur quake fungerar, tex... :)
-
-
-	// NÄTVERKSSAK BORTTAGEN.
-
-	///////////////////////////////////////////////////////////
-	// Beräkna samma saker fast för den andra bilen!! ////////////////////////77
-	/////////////////////////////////////////////////////////////////////////////
-
-
-	// NÄTVERKSSAK BORTTAGEN
-
 	return true;
 }
 
 static int CalcGameVars()
 {
-
 	// Tar hand om hastigheten...
 	if(bil.o.speed>bil.maxspeed)
 		bil.o.speed=bil.maxspeed;
@@ -828,20 +752,6 @@ static int CalcGameVars()
 
 	object_forward(&bil.o);
 
-	///////////////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////////////
-	///			Styr även nätverksbilarna...						 //
-	///////////////////////////////////////////////////////////////////
-	///////////////////////////////////////////////////////////////////
-
-	//NÄTVERKSSAK BORTTAGEN
-
-
-
-	// Styr de datorkontrollerade gubbarna (och senare även bilar?)
-	// ----------------------------------------------------
-	// Nej, jag har bestämt mig. Vi stänger av gubbarna när vi kör med networch...
-
 	if(!Network) {
 		int i;
 		for(i=0;i<nrgubbar;i++) {
@@ -850,28 +760,8 @@ static int CalcGameVars()
 
 	}	//!Network
 
-
-
-
-
-	// Nu är det kollisiondetection som gäller här...
-	// För att inte göra det för svårt, gör vi bara kuber med ett z:a värde på 0.0f åkbara...
-
-	// Kontrollera så att den inte krockar med en kuuub...
-	/* -------------------------------------------------------------
-	   HÄÄÄÄR ÄR DET VIIIKTIGAST JUST NUUUUUU!!!!!!!!!!!!!!!!!!
-	   ------------------------------------------------------------ */
-
-	/////////////////////////////////////////////////////////////////////////////////
-	/// EINAR!!! Det här kommer ju att dra lika mycket CPU som... jag vet inte vad...
-	/////////////////////////////////////////////////////////////////////////////////
-
-
 	int loop1 = 0, loop2 = 0;
 
-
-	// Det kan tyckas vara onödigt att kolla alla kuber på banan... fixa så att den kollar bara de närmaste...
-	// kontrollera så att inte bilen krockar med en stor KUUB!
 	for(loop1=0 ;loop1<world.nrcubex;loop1++) {
 		for(loop2=0;loop2<world.nrcubey;loop2++) {
 			if (object_colliding(&(map_cube(world, loop1, loop2, 0).o), &bil.o)) {
@@ -893,24 +783,6 @@ static int CalcGameVars()
 			}
 		}
 	}
-
-
-	// Om vi spelar nätverk, så ska vi även dra CPU på att kolla om andra bilen har krockat...
-	/////////////////////////////////////////////////////////////////////////////////////////
-	// Detta är alltså nätverksbilen som kollas emot krockar!!!!
-
-	//NÄTVERKSSAK BORTTAGEN
-
-
-	// Kolla så att inte de små bilbananerna krockar med varandra...
-
-	//NÄTVERKSSAK BORTTAGEN
-
-
-
-
-	// Kolla så att inte gubbarna krockar med bilen...
-	// Vi lägger detta före de andra gubb grejjerna, för att jag kanske knuffar lite på gubbarna här...
 
 	if(!Network) {
 
@@ -938,17 +810,6 @@ static int CalcGameVars()
 
 		}
 
-		// Se till så att inte gubbarna krockar med sig själva
-		// denna funktion kan optimeras tusenfalt!!
-		// Men det värsta måste väl vara att den inte fungerar...
-		// Orkar inte krångla med den nu, jag vill få igång lite roliga saker...
-
-		//TRASIG GUBBSAK BORTTAGEN
-
-		// Se till så att inte gubbarna krockar med nåt väggaktigt...
-		// Fungerar, men vad som händer med gubbarna behöver absolut finjusteras...
-
-		// Oj, oj, oj... precis när jag trodde att jag nått CPU toppen för en liten funktion...
                 int loop2, loop3;
 		for (loop3=0 ;loop3<nrgubbar; loop3++) {
 			for (loop1=0 ;loop1<world.nrcubex;loop1++) {
@@ -963,8 +824,7 @@ static int CalcGameVars()
 				}
 			}
 		}
-	} // !Network
-	/* -----------------------------------------------------------------*/
+	}
 
 	bil.o.x+=tmpx;
 	bil.o.y+=tmpy;
@@ -984,8 +844,6 @@ static int CalcGameVars()
 		blendcolor=0.0f;
 
 
-
-
 	return true;
 }
 
@@ -998,14 +856,6 @@ static int DrawGLScene()
 	/* Set camera position (by translating the world in the opposite direction */
 	glLoadIdentity();
 	glTranslatef(-camera.x,-camera.y,camera.z+camera.SpeedVar);
-
-	// Spelplanen
-	// Hmm, nu ska vi rita upp spelplanen... sen ska den optimeras så den bara ritar upp det nödvändiga...
-
-	//glDisable(GL_COLOR_MATERIAL);
-
-	// Debugging
-
 
 	if(blendcolor>0.0f)
 		glEnable(GL_BLEND);
@@ -1041,11 +891,6 @@ static int DrawGLScene()
 	}
 
 
-	// Ritar upp bil(en/arna) --------------------------------
-
-	// GAAAH!!!
-	// öj, det fungerar... Men det fungerar nog inte om man ska ha fler bilar... <- Nuså. :p
-
         car_render(&bil);
 	if (Network) {
 		for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
@@ -1054,15 +899,12 @@ static int DrawGLScene()
 		}
 	}
 
-	// Rita upp gubbbananerna...
-	// Hoho! De SNURRAR!!! :)))))
-
 	if(!Network) {
 		for(loop1=0;loop1<nrgubbar;loop1++) {
 		    gubbe_render(&gubbar[loop1]);
 		}
 
-	} // !Network
+	}
 
         hud_set_damage(bil.helhet);
 
@@ -1073,9 +915,6 @@ static int DrawGLScene()
 	}
 
 	return true;
-
-	// TYp.
-
 }
 
 static void peer_send_line(const char *nick, const char *input) {
@@ -1169,7 +1008,6 @@ static int CheckaEvents()
 			event_handle_resize(&event.resize);
 			break;
 
-			/* SDL_QUIT event (window close) */
 		case SDL_QUIT:
 			return 1;
 			break;
@@ -1329,8 +1167,6 @@ static void opponents_init() {
 
 int main(int argc, char *argv[])
 {
-	// Voila, en slumpgenerator... då var det bara collisiondetection grejjen kvar...
-	// den förbannade doningen FUNGERAR INTE!
 	srand(time(NULL));
 
 	char mbuf[1024];
@@ -1365,9 +1201,6 @@ int main(int argc, char *argv[])
 						     // Jag lovar!
 	world.ntextures = sizeof(texture_filenames) / sizeof(char *);
 
-	// Här är den första delen av porten....
-
-	// Nollställ knapp-arrayen...
 	int tmpk;
 	for(tmpk=0;tmpk<350;tmpk++)
 		keys[tmpk]=false;
@@ -1406,7 +1239,6 @@ int main(int argc, char *argv[])
 	LoadCars();
 	LoadLevel();
 
-	// HUVUDLOOPEN!!! Detta är själva spelet!
 	// TODO: Implementera frameskip...
 	Uint32 TimerTicks;
 
@@ -1449,5 +1281,5 @@ int main(int argc, char *argv[])
 
         SDL_Quit();
 
-	return 0; 	// SLYYT.
+	return 0;
 }
