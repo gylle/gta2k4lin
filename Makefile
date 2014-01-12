@@ -27,7 +27,7 @@ LIBS_EXTRA+=$(BULLETSRC)/.libs/libBulletDynamics.a $(BULLETSRC)/.libs/libBulletC
 
 LIBS=$(shell pkg-config --libs $(LIBRARIES)) $(LIBS_EXTRA)
 
-CFLAGS=-O2 -Wall -I./src -I$(BULLETSRC) $(shell pkg-config --cflags $(LIBRARIES)) -lm -g
+CFLAGS=-O2 -Wall -I./src -I$(BULLETSRC) $(shell pkg-config --cflags $(LIBRARIES)) -lm -lpthread -g
 
 CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpermissive
 
@@ -45,7 +45,7 @@ depend:
 	make -B Makefile.depend
 
 gta2k4lin: src/main.o src/sound.o src/network.o src/hud.o src/lmq.o src/object.o src/stl.o src/car.o src/gubbe.o src/btwrap.o
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
 
 Makefile.depend: $(CXX_SOURCES) $(C_SOURCES)
 	$(CC) -MM $(CFLAGS) $^ > Makefile.depend
