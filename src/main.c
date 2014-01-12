@@ -43,7 +43,6 @@
 #include <sys/param.h>
 #include <getopt.h>
 
-#include "SDL.h"
 #include "SDL_image.h"
 
 #include "sound.h"
@@ -55,7 +54,7 @@
 
 int initial_width = 640;
 int initial_height = 480;
-const int sdl_video_flags = SDL_OPENGL | SDL_RESIZABLE;
+const int sdl_video_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
 const int sdl_bpp = 32; // Vi gillar 32 här dåva
 
 #define bool  int
@@ -64,7 +63,7 @@ const int sdl_bpp = 32; // Vi gillar 32 här dåva
 
 #define nrgubbar 100
 
-bool keys[350];			// Array Used For The Keyboard Routine
+bool keys[SDL_NUM_SCANCODES];			// Array Used For The Keyboard Routine
 
 bool NoBlend=true;
 
@@ -605,7 +604,7 @@ static int RespondToKeys()
 	bool brakepressed=false;
         static int broms_in_progress = 0;
 
-	if(keys[SDLK_SPACE]) {
+	if(keys[SDL_SCANCODE_SPACE]) {
 		brakepressed=true;
 		if(bil.o.speed<0.0f && bil.o.speed>-bil.bromsspeed)
 			bil.o.speed=0.0f;
@@ -627,7 +626,7 @@ static int RespondToKeys()
 		broms_in_progress = 0;
 	}
 
-	if(keys[SDLK_LEFT]) {
+	if(keys[SDL_SCANCODE_LEFT]) {
 		sttmp=bil.o.speed/bil.maxspeed;			// Omöjliggör styrning vid stillastående, och
 		if(brakepressed)
 			sttmp+=0.7f;
@@ -636,7 +635,7 @@ static int RespondToKeys()
 			bil.o.angle+=bil.turnspeed*sttmp;				// öka graden av styrmöjlighet ju snabbare det går.
 	}
 
-	if(keys[SDLK_RIGHT]) {
+	if(keys[SDL_SCANCODE_RIGHT]) {
 		sttmp=bil.o.speed/bil.maxspeed;
 		if(brakepressed)
 			sttmp+=0.7f;
@@ -646,7 +645,7 @@ static int RespondToKeys()
 	}
 
 	if(bil.helhet==0) {
-		if(keys[SDLK_RETURN]) {
+		if(keys[SDL_SCANCODE_RETURN]) {
 			bil.helhet=100;
 			bil.t1=1;
 			/* mbil.Points++; */
@@ -662,16 +661,16 @@ static int RespondToKeys()
 
 
 	if(!(bil.helhet==0)) {
-		if(keys[SDLK_UP]) {
+		if(keys[SDL_SCANCODE_UP]) {
 			bil.o.speed=bil.o.speed+bil.accspeed;
 		}
 
-		if(keys[SDLK_DOWN]) {
+		if(keys[SDL_SCANCODE_DOWN]) {
 			bil.o.speed=bil.o.speed-bil.accspeed;
 		}
 	}
 
-	if(keys[SDLK_TAB]) {
+	if(keys[SDL_SCANCODE_TAB]) {
 		sound_cont_play(tut);
 	}
 	else {
@@ -679,39 +678,39 @@ static int RespondToKeys()
 	}
 
 	// Styr kameran
-	if(keys[SDLK_F5]) {
+	if(keys[SDL_SCANCODE_F5]) {
 		camera.z-=0.5f;
 	}
-	if(keys[SDLK_F6]) {
+	if(keys[SDL_SCANCODE_F6]) {
 		camera.z+=0.5f;
 	}
 
-	if(keys[SDLK_F8]) {
+	if(keys[SDL_SCANCODE_F8]) {
 		camera.x+=0.9f;
 	}
-	if(keys[SDLK_F7]) {
+	if(keys[SDL_SCANCODE_F7]) {
 		camera.x-=0.9f;
 	}
-	if(keys[SDLK_F3]) {
+	if(keys[SDL_SCANCODE_F3]) {
 		camera.y+=0.9f;
 	}
-	if(keys[SDLK_F4]) {
+	if(keys[SDL_SCANCODE_F4]) {
 		camera.y-=0.9f;
 	}
 
-	if(keys[SDLK_F9])
+	if(keys[SDL_SCANCODE_F9])
 		NoBlend=!NoBlend;
 
-	if(keys[SDLK_F2]) {
+	if(keys[SDL_SCANCODE_F2]) {
 		debugBlend=true;
 	} else {
 		debugBlend=false;
 	}
-        if(keys[SDLK_t]) {
+        if(keys[SDL_SCANCODE_T]) {
             hud_show_input_field(1);
         }
 
-        if(keys[SDLK_ESCAPE])
+        if(keys[SDL_SCANCODE_ESCAPE])
         {
             printf("Escape tryckt, avslutar...\n");
             return false;
@@ -927,7 +926,7 @@ static void input_send_line(const char *input) {
 	hud_printf("Me> %s", input);
 }
 
-static int handle_input_field(SDL_keysym key, int type) {
+static int handle_input_field(SDL_Keysym key, int type) {
     if(!hud_input_field_active())
         return 0;
 
@@ -945,14 +944,14 @@ static int handle_input_field(SDL_keysym key, int type) {
         input_length = 0;
     }
 
-    if(key.sym == SDLK_ESCAPE) {
+    if(key.scancode == SDL_SCANCODE_ESCAPE) {
         free(input_field);
         input_field = NULL;
         hud_show_input_field(0);
-    } else if(key.sym == SDLK_BACKSPACE && input_length > 0) {
+    } else if(key.scancode == SDL_SCANCODE_BACKSPACE && input_length > 0) {
         input_field[--input_length] = '\0';
         hud_update_input_field(input_field);
-    } else if(key.sym == SDLK_RETURN) {
+    } else if(key.scancode == SDL_SCANCODE_RETURN) {
         if(input_length > 0)
             input_send_line(input_field);
 
@@ -964,13 +963,13 @@ static int handle_input_field(SDL_keysym key, int type) {
         /* TODO: We should just go UTF-8, I guess. */
 
         char c = 0;
-        if((key.sym >= 'a' && key.sym <= 'z')) {
-            c = key.sym;
+        if((key.scancode >= 'a' && key.scancode <= 'z')) {
+            c = key.scancode;
             if(key.mod & KMOD_SHIFT)
                 c -= 'a' - 'A';
-        } else if((key.sym >= 0x20 && key.sym <= 0x7e) ||
-                  (key.sym >= 0xc0 && key.sym <= 0xff)) {
-                  c = key.sym;
+        } else if((key.scancode >= 0x20 && key.scancode <= 0x7e) ||
+                  (key.scancode >= 0xc0 && key.scancode <= 0xff)) {
+                  c = key.scancode;
         }
 
         if(c != 0) {
@@ -983,10 +982,6 @@ static int handle_input_field(SDL_keysym key, int type) {
     return 1; /* We handled the key, stop processing it. */
 }
 
-static void event_handle_resize(SDL_ResizeEvent *resize) {
-    SDL_SetVideoMode(resize->w, resize->h, sdl_bpp, sdl_video_flags);
-    gl_resize(resize->w, resize->h);
-}
 
 static int CheckaEvents()
 {
@@ -996,16 +991,20 @@ static int CheckaEvents()
 		switch( event.type ){
 		case SDL_KEYDOWN:
 			if(!handle_input_field(event.key.keysym, SDL_KEYDOWN))
-			    keys[event.key.keysym.sym]=true;
+			    keys[event.key.keysym.scancode]=true;
 			break;
 
 		case SDL_KEYUP:
 			handle_input_field(event.key.keysym, SDL_KEYUP);
-			keys[event.key.keysym.sym]=false;
+			keys[event.key.keysym.scancode]=false;
 			break;
 
-		case SDL_VIDEORESIZE:
-			event_handle_resize(&event.resize);
+		case SDL_WINDOWEVENT:
+			switch (event.window.event) {
+			case SDL_WINDOWEVENT_RESIZED:
+				gl_resize(event.window.data1, event.window.data2);
+				break;
+			}
 			break;
 
 		case SDL_QUIT:
@@ -1205,7 +1204,7 @@ int main(int argc, char *argv[])
 	for(tmpk=0;tmpk<350;tmpk++)
 		keys[tmpk]=false;
 
-	SDL_Surface *screen;
+	SDL_Window *screen;
 
 	bool done=false;
 
@@ -1228,12 +1227,17 @@ int main(int argc, char *argv[])
 		Network = true;
 	}
 
-	screen = SDL_SetVideoMode(initial_width, initial_height, sdl_bpp, sdl_video_flags);
+	screen = SDL_CreateWindow("gta2k4lin",
+				  SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+				  initial_width, initial_height,
+				  sdl_video_flags);
 	if (screen == NULL)
 	{
-		printf("SetVideoMode failed (EInar)\n");
+		printf("SDL_CreateWindow failed\n");
 		exit(1);
 	}
+
+	SDL_GLContext glcontext = SDL_GL_CreateContext(screen);
 
 	InitGL(initial_width, initial_height);
 	LoadCars();
@@ -1264,7 +1268,7 @@ int main(int argc, char *argv[])
 
 		DrawGLScene();
                 hud_render();
-		SDL_GL_SwapBuffers();
+		SDL_GL_SwapWindow(screen);
 
 		if (Network) {
 			network_put_position(&(bil.o));
