@@ -55,30 +55,25 @@
 int initial_width = 640;
 int initial_height = 480;
 const int sdl_video_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
-const int sdl_bpp = 32; // Vi gillar 32 här dåva
-
-#define bool  int
-#define false 0
-#define true  1
 
 #define nrgubbar 100
 
-bool keys[SDL_NUM_SCANCODES];			// Array Used For The Keyboard Routine
+int keys[SDL_NUM_SCANCODES];			// Array Used For The Keyboard Routine
 
-bool NoBlend=true;
+int NoBlend=1;
 
-bool sound = true;
+int sound = 1;
 int sound_music = 1;
 
 // Enable:as bara ifall man ska försöka få igång nätverket...
-bool Network=false;			// Nätverk eller singelplayer...
+int Network=0;			// Nätverk eller singelplayer...
 
 char *server_addr = NULL;
 unsigned server_port = 9378;
 char *nick = NULL;
 int proto_only = 0;
 
-bool debugBlend=false;
+int debugBlend=0;
 float blendcolor;
 
 static const int input_field_max_length = 80;
@@ -143,7 +138,7 @@ static void camera_move_for_car(struct car *car) {
 struct gubbe {
 	int ltexture, ltexture2,  dtexture;
 	float maxspeed,maxbspeed,accspeed;
-	bool alive;
+	int alive;
 
 	// Time to respawn
 	int atimer;
@@ -212,7 +207,7 @@ struct car opponent_cars[NETWORK_MAX_OPPONENTS];
 struct opponent opponents[NETWORK_MAX_OPPONENTS];
 
 static void init_gubbe(struct gubbe *g) {
-    g->alive=true;
+    g->alive=1;
 
     g->o.speed=0.0f;
     g->maxspeed=0.3f;
@@ -257,7 +252,7 @@ static void gubbe_move(struct gubbe *g) {
 
         if(g->atimer>=gubbe_respawn_frames) {
             g->atimer=0;
-            g->alive=true;
+            g->alive=1;
 
             g->o.x=(float)((rand() % world.nrcubex*BSIZE*2)*100)/100;
             g->o.y=(float)((rand() % world.nrcubey*BSIZE*2)*100)/100;
@@ -439,7 +434,7 @@ static int LoadLevel()
 	// Allocate them cubes!
 	world.map = (struct cube *)calloc(world.nrcubex * world.nrcubey * world.nrcubez, sizeof(struct cube));
 	if (world.map == NULL)  {
-		return false;
+		return 0;
 	}
 	memset(world.map, 0, world.nrcubex * world.nrcubey * world.nrcubez *
 			sizeof(struct cube));
@@ -519,7 +514,7 @@ static int LoadLevel()
 	map_cube(world, world.nrcubex/2, world.nrcubey/2, 1).texturenr=10;
 	map_cube(world, world.nrcubex/2, world.nrcubey/2, 1).o.z = BSIZE * 2 * 2;
 
-	return true;
+	return 1;
 }
 
 static int LoadCars()
@@ -538,7 +533,7 @@ static int LoadCars()
 
         init_gubbe_displaylist();
 
-	return true;
+	return 1;
 }
 
 static void gl_resize(int width, int height) {
@@ -595,18 +590,18 @@ static int InitGL(int width, int height)
 
 	gl_resize(width, height);
 
-	return true;										// Initialization Went OK
+	return 1;										// Initialization Went OK
 }
 
 static int RespondToKeys()
 {
 
 	float sttmp;
-	bool brakepressed=false;
+	int brakepressed=0;
         static int broms_in_progress = 0;
 
 	if(keys[SDL_SCANCODE_SPACE]) {
-		brakepressed=true;
+		brakepressed=1;
 		if(bil.o.speed<0.0f && bil.o.speed>-bil.bromsspeed)
 			bil.o.speed=0.0f;
 		if(bil.o.speed>0.0f && bil.o.speed<bil.bromsspeed)
@@ -703,9 +698,9 @@ static int RespondToKeys()
 		NoBlend=!NoBlend;
 
 	if(keys[SDL_SCANCODE_F2]) {
-		debugBlend=true;
+		debugBlend=1;
 	} else {
-		debugBlend=false;
+		debugBlend=0;
 	}
         if(keys[SDL_SCANCODE_T]) {
 	    input_field_activate();
@@ -714,10 +709,10 @@ static int RespondToKeys()
         if(keys[SDL_SCANCODE_ESCAPE])
         {
             printf("Escape tryckt, avslutar...\n");
-            return false;
+            return 0;
         }
 
-	return true;
+	return 1;
 }
 
 static int CalcGameVars()
@@ -792,7 +787,7 @@ static int CalcGameVars()
 
 			if (object_colliding(&gubbar[loop1].o, &bil.o)) {
 				if(bil.o.speed>0.4f || bil.o.speed<-0.4f) {
-					gubbar[loop1].alive=false;
+					gubbar[loop1].alive=0;
 
 					struct timeval tv;
 					gettimeofday(&tv, NULL);
@@ -844,7 +839,7 @@ static int CalcGameVars()
 		blendcolor=0.0f;
 
 
-	return true;
+	return 1;
 }
 
 static int DrawGLScene()
@@ -914,7 +909,7 @@ static int DrawGLScene()
             /* TODO */
 	}
 
-	return true;
+	return 1;
 }
 
 static void peer_send_line(const char *nick, const char *input) {
@@ -1006,12 +1001,12 @@ static int CheckaEvents()
 		switch( event.type ){
 		case SDL_KEYDOWN:
 			if(!input_field_key_event(event.key.keysym, SDL_KEYDOWN))
-				keys[event.key.keysym.scancode]=true;
+				keys[event.key.keysym.scancode]=1;
 			break;
 
 		case SDL_KEYUP:
 		    //input_field_key_event(event.key.keysym, SDL_KEYUP);
-			keys[event.key.keysym.scancode]=false;
+			keys[event.key.keysym.scancode]=0;
 			break;
 
 		case SDL_WINDOWEVENT:
@@ -1141,10 +1136,10 @@ static int parse_options(int argc, char *argv[])
 			exit(42);
 			break;
 		case 'S':
-			sound = false;
+			sound = 0;
 			break;
 		case 'M':
-			sound_music = false;
+			sound_music = 0;
 			break;
 		default:
 			printf("?? getopt returned character code 0x%x ??\n", opt);
@@ -1221,11 +1216,11 @@ int main(int argc, char *argv[])
 
 	int tmpk;
 	for(tmpk=0;tmpk<350;tmpk++)
-		keys[tmpk]=false;
+		keys[tmpk]=0;
 
 	SDL_Window *screen;
 
-	bool done=false;
+	int done=0;
 
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)<0) {
 		printf("Kunde inte initialisera SDL!\n");
@@ -1238,14 +1233,14 @@ int main(int argc, char *argv[])
 
 	network_init();
 
-	Network=false;
+	Network=0;
 
 	if (server_addr != NULL) {
 		if (network_connect(server_addr, server_port, nick, proto_only)) {
 			fprintf(stderr, "Connect failed, exiting :(\n");
 			return 28;
 		}
-		Network = true;
+		Network = 1;
 	}
 
 	screen = SDL_CreateWindow("gta2k4lin",
