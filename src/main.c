@@ -81,7 +81,8 @@ int proto_only = 0;
 bool debugBlend=false;
 float blendcolor;
 
-
+static const int input_field_max_length = 80;
+static void input_field_activate();
 
 struct cube {
 	// Vilken textur som ska mappas till kuben...
@@ -707,7 +708,7 @@ static int RespondToKeys()
 		debugBlend=false;
 	}
         if(keys[SDL_SCANCODE_T]) {
-            hud_show_input_field(1);
+	    input_field_activate();
         }
 
         if(keys[SDL_SCANCODE_ESCAPE])
@@ -926,60 +927,74 @@ static void input_send_line(const char *input) {
 	hud_printf("Me> %s", input);
 }
 
-static int handle_input_field(SDL_Keysym key, int type) {
-    if(!hud_input_field_active())
-        return 0;
+struct {
+    char *text;
+    int length;
+} input_field_data;
 
-    static const int input_max = 80;
-    static char *input_field = NULL;
-    static int input_length = 0;
+static void input_field_activate() {
+    hud_show_input_field(1);
+
+    if(input_field_data.text == NULL) {
+        input_field_data.text = (char*)malloc(input_field_max_length+1);
+        input_field_data.text[0] = '\0';
+        input_field_data.length = 0;
+    }
+
+    SDL_StartTextInput();
+}
+
+static void input_field_deactivate() {
+    SDL_StopTextInput();
+    free(input_field_data.text);
+    input_field_data.text = NULL;
+    hud_update_input_field("");
+    hud_show_input_field(0);
+}
+
+static int input_field_is_active() {
+    return hud_input_field_active();
+}
+
+static int input_field_key_event(SDL_Keysym key, int type) {
+    if(!input_field_is_active())
+        return 0;
 
     if(type == SDL_KEYUP) {
         return 0;
     }
 
-    if(input_field == NULL) {
-        input_field = (char*)malloc(input_max+1);
-        input_field[0] = '\0';
-        input_length = 0;
-    }
-
     if(key.scancode == SDL_SCANCODE_ESCAPE) {
-        free(input_field);
-        input_field = NULL;
-        hud_show_input_field(0);
-    } else if(key.scancode == SDL_SCANCODE_BACKSPACE && input_length > 0) {
-        input_field[--input_length] = '\0';
-        hud_update_input_field(input_field);
+        input_field_deactivate();
+    } else if(key.scancode == SDL_SCANCODE_BACKSPACE && input_field_data.length > 0) {
+        /* FIXME: utf-8 */
+        input_field_data.text[--input_field_data.length] = '\0';
+        hud_update_input_field(input_field_data.text);
     } else if(key.scancode == SDL_SCANCODE_RETURN) {
-        if(input_length > 0)
-            input_send_line(input_field);
+        if(input_field_data.length > 0)
+            input_send_line(input_field_data.text);
 
-        free(input_field);
-        input_field = NULL;
-        hud_update_input_field("");
-        hud_show_input_field(0);
-    } else if(input_length < input_max) {
-        /* TODO: We should just go UTF-8, I guess. */
-
-        char c = 0;
-        if((key.scancode >= 'a' && key.scancode <= 'z')) {
-            c = key.scancode;
-            if(key.mod & KMOD_SHIFT)
-                c -= 'a' - 'A';
-        } else if((key.scancode >= 0x20 && key.scancode <= 0x7e) ||
-                  (key.scancode >= 0xc0 && key.scancode <= 0xff)) {
-                  c = key.scancode;
-        }
-
-        if(c != 0) {
-            input_field[input_length++] = c;
-            input_field[input_length] = '\0';
-            hud_update_input_field(input_field);
-        }
+        input_field_deactivate();
     }
 
-    return 1; /* We handled the key, stop processing it. */
+    return 1; /* We handled the key (or should ignore it), stop processing it. */
+}
+
+static int input_field_add_text(char *text) {
+    if(!input_field_is_active()) {
+        printf("BUG: input_field_add_text called when input field inactive.\n");
+        return 0;
+    }
+
+    size_t len = strlen(text);
+    if(input_field_data.length + len < input_field_max_length) {
+        strcat(input_field_data.text, text);
+        input_field_data.length += len;
+        hud_update_input_field(input_field_data.text);
+        return 1;
+    }
+
+    return 0;
 }
 
 
@@ -990,12 +1005,12 @@ static int CheckaEvents()
 	while( SDL_PollEvent( &event ) ){
 		switch( event.type ){
 		case SDL_KEYDOWN:
-			if(!handle_input_field(event.key.keysym, SDL_KEYDOWN))
-			    keys[event.key.keysym.scancode]=true;
+			if(!input_field_key_event(event.key.keysym, SDL_KEYDOWN))
+				keys[event.key.keysym.scancode]=true;
 			break;
 
 		case SDL_KEYUP:
-			handle_input_field(event.key.keysym, SDL_KEYUP);
+		    //input_field_key_event(event.key.keysym, SDL_KEYUP);
 			keys[event.key.keysym.scancode]=false;
 			break;
 
@@ -1005,6 +1020,10 @@ static int CheckaEvents()
 				gl_resize(event.window.data1, event.window.data2);
 				break;
 			}
+			break;
+
+		case SDL_TEXTINPUT:
+			input_field_add_text(event.text.text);
 			break;
 
 		case SDL_QUIT:
@@ -1214,6 +1233,8 @@ int main(int argc, char *argv[])
 	}
 
 	atexit(SDL_Quit);
+
+	SDL_StopTextInput();
 
 	network_init();
 
