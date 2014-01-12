@@ -8,18 +8,18 @@ CXX_SOURCES=src/btwrap.cpp
 CC=gcc
 CXX=g++
 
-LIBRARIES=sdl glu x11 SDL_image
+LIBRARIES=sdl2 glu x11 SDL2_image
 
-ifeq ($(shell sh -c 'pkg-config --libs SDL_mixer 2>/dev/null'),)
-	LIBS_EXTRA+=-lSDL_mixer
+ifeq ($(shell sh -c 'pkg-config --libs SDL2_mixer 2>/dev/null'),)
+	LIBS_EXTRA+=-lSDL2_mixer
 else
-	LIBRARIES+= SDL_mixer
+	LIBRARIES+= SDL2_mixer
 endif
 
-ifeq ($(shell sh -c 'pkg-config --libs SDL_ttf 2>/dev/null'),)
-	LIBS_EXTRA+=-lSDL_ttf
+ifeq ($(shell sh -c 'pkg-config --libs SDL2_ttf 2>/dev/null'),)
+	LIBS_EXTRA+=-lSDL2_ttf
 else
-	LIBRARIES+= SDL_ttf
+	LIBRARIES+= SDL2_ttf
 endif
 
 # LIBS_EXTRA+=$(BULLETSRC)/.libs/libBulletDynamics.so $(BULLETSRC)/.libs/libBulletCollision.so $(BULLETSRC)/.libs/libLinearMath.so

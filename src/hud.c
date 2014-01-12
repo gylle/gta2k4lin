@@ -261,7 +261,7 @@ static SDL_Surface *vprintf_surface(const char *fmt, va_list args)
     static char buf[512];
     vsnprintf(buf, 512, fmt, args);
 
-    SDL_Surface *text_surface = TTF_RenderText_Solid(hud_data->font, buf, hud_data->fg_color);
+    SDL_Surface *text_surface = TTF_RenderUTF8_Solid(hud_data->font, buf, hud_data->fg_color);
     if(!text_surface) {
         printf("TTF_RenderText_Solid failed: %s\n", TTF_GetError());
         return NULL;

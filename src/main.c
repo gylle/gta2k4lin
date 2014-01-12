@@ -20,30 +20,15 @@
  *
  */
 
-// gta 2000... :) (Inte officielt namn)
-// Detta ska föreställa linux porten...
 
-
-
-//////////////////////////////////////////////////////////////////////////
-//		KATASTROF::		Koden blir mer och mer ostrukturerad			//
-//						Oklart hur länge det går att fatta nåt av den :)//
-//////////////////////////////////////////////////////////////////////////
-
-
-
-/*		This program is made by skatteola. It uses
- *		alot of code from the site nehe.gamedev.com
- *		That is because I am still learning, and I
- *		think that this code is really good to start with.
- *		The original "disclamer" follows:
- *	--------------------------------------------------------
- *
- *		This Code Was Created By Jeff Molofee 2000
- *		A HUGE Thanks To Fredric Echols For Cleaning Up
- *		And Optimizing This Code, Making It More Flexible!
- *		If You've Found This Code Useful, Please Let Me Know.
- *		Visit My Site At nehe.gamedev.net
+/* Some code originally from nehe.gamedev.com,
+ * original notice as follows:
+ * -------------------------------------------------------
+ * This Code Was Created By Jeff Molofee 2000
+ * A HUGE Thanks To Fredric Echols For Cleaning Up
+ * And Optimizing This Code, Making It More Flexible!
+ * If You've Found This Code Useful, Please Let Me Know.
+ * Visit My Site At nehe.gamedev.net
  */
 
 #include <unistd.h>
@@ -58,7 +43,6 @@
 #include <sys/param.h>
 #include <getopt.h>
 
-#include "SDL.h"
 #include "SDL_image.h"
 
 #include "Bullet-C-Api.h"
@@ -76,12 +60,7 @@
 
 int initial_width = 640;
 int initial_height = 480;
-const int sdl_video_flags = SDL_OPENGL | SDL_RESIZABLE;
-const int sdl_bpp = 32; // Vi gillar 32 här dåva
-
-#define bool  int
-#define false 0
-#define true  1
+const int sdl_video_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
 
 #define nrgubbar 100
 
@@ -89,38 +68,27 @@ const int sdl_bpp = 32; // Vi gillar 32 här dåva
 plPhysicsSdkHandle physics_sdk = 0;
 plDynamicsWorldHandle dynamics_world = 0;
 
-bool keys[350];			// Array Used For The Keyboard Routine
+int keys[SDL_NUM_SCANCODES];			// Array Used For The Keyboard Routine
 
-bool NoBlend=true;
+int NoBlend=1;
 
-bool sound = true;
+int sound = 1;
 int sound_music = 1;
 
-// Iallafall så är stommen för nätverket laggd...
-// Hmmm, det tar sig...
-
 // Enable:as bara ifall man ska försöka få igång nätverket...
-bool Network=false;			// Nätverk eller singelplayer...
+int Network=0;			// Nätverk eller singelplayer...
 
 char *server_addr = NULL;
 unsigned server_port = 9378;
 char *nick = NULL;
 int proto_only = 0;
 
-
-
-// Skaffa FPS räknare... hur ska man gööra?
-
-
-bool debugBlend=false;
+int debugBlend=0;
 float blendcolor;
 
+static const int input_field_max_length = 80;
+static void input_field_activate();
 
-
-
-
-
-// Fina spel grejjer!
 struct cube {
 	// Vilken textur som ska mappas till kuben...
 	int texturenr;
@@ -161,20 +129,14 @@ static void camera_move_for_car(struct car *car) {
 }
 
 struct spelare {
-	// Poäng
 	int points;
-	// Krockar
 	int krockar;
-	// Överkörda människor
 	int runovers;
 };
 
 struct gubbe *gubbar; //[nrgubbar];
 struct spelare player;
 
-
-
-// Storleken på banan skulle behövas laddas in från en fil, men för tillfället vet jag inte riktigt hur det skulle gå till...
 
 #define TEXTURE_PATH "data/"
 #define map_cube(world, x, y, z) world.map[((x) * (world).nrcubey + (y)) * (world).nrcubez + (z)]
@@ -201,7 +163,6 @@ struct opponent opponents[NETWORK_MAX_OPPONENTS];
 
 static int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 {
-
 	/* Load textures from file names in world */
 	world.texIDs = (GLuint *)calloc(world.ntextures, sizeof(GLuint));
 	if (world.texIDs == NULL) {
@@ -260,17 +221,10 @@ static int LoadGLTextures()								// Load Bitmaps And Convert To Textures
 
 static int LoadLevel()
 {
-
-	// Används inte, borttaget för att spara plats...
-	// Humm... jag kom på att det visst används. :)
-	// Bara att kopiera tillbaks...
-
-	// LADDA IN!!!!
-	
 	// Allocate them cubes!
 	world.map = (struct cube *)calloc(world.nrcubex * world.nrcubey * world.nrcubez, sizeof(struct cube));
 	if (world.map == NULL)  {
-		return false;
+		return 0;
 	}
 	memset(world.map, 0, world.nrcubex * world.nrcubey * world.nrcubez *
 			sizeof(struct cube));
@@ -375,10 +329,10 @@ static int LoadLevel()
             }
         }
 
-	return true;
+	return 1;
 }
 
-static int LoadCars()   // och gubbar.
+static int LoadCars()
 {
 	camera_init(&camera);
 
@@ -396,7 +350,7 @@ static int LoadCars()   // och gubbar.
             printf("init_gubbe: %p:\n", &gubbar[i]);
 	}
 
-	return true;
+	return 1;
 }
 
 static void gl_resize(int width, int height) {
@@ -417,9 +371,8 @@ static void gl_resize(int width, int height) {
     glMatrixMode( GL_MODELVIEW );
 }
 
-static int InitGL(int width, int height) //		 All Setup For OpenGL Goes Here
+static int InitGL(int width, int height)
 {
-
 	if (!LoadGLTextures())							// Jump To Texture Loading Routine ( NEW )
 	{
 		printf("Bananeinar, det verkar inte som om den vill ladda texturerna.");
@@ -454,14 +407,14 @@ static int InitGL(int width, int height) //		 All Setup For OpenGL Goes Here
 
 	gl_resize(width, height);
 
-	return true;										// Initialization Went OK
+	return 1;										// Initialization Went OK
 }
 
 static int RespondToKeys()
 {
         static int broms_in_progress = 0;
 
-	if(keys[SDLK_SPACE]) {
+	if(keys[SDL_SCANCODE_SPACE]) {
 		bil.brakeForce = 200.0f;
 
 		if (!broms_in_progress) {
@@ -474,10 +427,10 @@ static int RespondToKeys()
 		bil.brakeForce = 0.0f;
 	}
 
-        if(keys[SDLK_RIGHT] || keys[SDLK_LEFT]) {
-            if(keys[SDLK_RIGHT]) {
+        if(keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_LEFT]) {
+            if(keys[SDL_SCANCODE_RIGHT]) {
                 bil.steering -= 0.2f;
-            } else if(keys[SDLK_LEFT]) {
+            } else if(keys[SDL_SCANCODE_LEFT]) {
                 bil.steering += 0.2f;
             }
 
@@ -494,7 +447,7 @@ static int RespondToKeys()
 
 
 	if(bil.helhet==0) {
-		if(keys[SDLK_RETURN]) {
+		if(keys[SDL_SCANCODE_RETURN]) {
 			bil.helhet=100;
 			bil.t1=1;
 			/* mbil.Points++; */
@@ -509,9 +462,9 @@ static int RespondToKeys()
 	}
 
         if(bil.helhet) {
-            if(keys[SDLK_UP]) {
+            if(keys[SDL_SCANCODE_UP]) {
                 bil.engineForce += 40.0f;
-            } else if(keys[SDLK_DOWN]) {
+            } else if(keys[SDL_SCANCODE_DOWN]) {
                 bil.engineForce -= 40.0f;
             } else {
                 bil.engineForce *= 0.1f;
@@ -531,14 +484,14 @@ static int RespondToKeys()
         plRaycastVehicle_SetSteeringValue(bil.bt_vehicle, bil.steering, 1);
 
 
-        if(keys[SDLK_u]) {
+        if(keys[SDL_SCANCODE_U]) {
             plVector3 force, rel_pos;
             force[0] = 0.0f; force[1] = 0.0f; force[2] = 50.0f;
             rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
 
             plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
         }
-        if(keys[SDLK_n]) {
+        if(keys[SDL_SCANCODE_N]) {
             plVector3 force, rel_pos;
             force[0] = 0.0f; force[1] = 0.0f; force[2] = -50.0f;
             rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
@@ -546,54 +499,53 @@ static int RespondToKeys()
             plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
         }
 
-	if(keys[SDLK_TAB]) {
+	if(keys[SDL_SCANCODE_TAB]) {
 		sound_cont_play(tut);
 	}
 	else {
 		sound_cont_stop(tut, 0);
 	}
 
-	// Detta är debug grejjer/saker som inte ska vara kvar i "riktiga" versionen...
 	// Styr kameran
-	if(keys[SDLK_F5]) {
+	if(keys[SDL_SCANCODE_F5]) {
 		camera.z-=0.5f;
 	}
-	if(keys[SDLK_F6]) {
+	if(keys[SDL_SCANCODE_F6]) {
 		camera.z+=0.5f;
 	}
 
-	if(keys[SDLK_F8]) {
+	if(keys[SDL_SCANCODE_F8]) {
 		camera.x+=0.9f;
 	}
-	if(keys[SDLK_F7]) {
+	if(keys[SDL_SCANCODE_F7]) {
 		camera.x-=0.9f;
 	}
-	if(keys[SDLK_F3]) {
+	if(keys[SDL_SCANCODE_F3]) {
 		camera.y+=0.9f;
 	}
-	if(keys[SDLK_F4]) {
+	if(keys[SDL_SCANCODE_F4]) {
 		camera.y-=0.9f;
 	}
 
-	if(keys[SDLK_F9])
+	if(keys[SDL_SCANCODE_F9])
 		NoBlend=!NoBlend;
 
-	if(keys[SDLK_F2]) {
-		debugBlend=true;
+	if(keys[SDL_SCANCODE_F2]) {
+		debugBlend=1;
 	} else {
-		debugBlend=false;
+		debugBlend=0;
 	}
-        if(keys[SDLK_t]) {
-            hud_show_input_field(1);
+        if(keys[SDL_SCANCODE_T]) {
+	    input_field_activate();
         }
 
-        if(keys[SDLK_ESCAPE])
+        if(keys[SDL_SCANCODE_ESCAPE])
         {
             printf("Escape tryckt, avslutar...\n");
-            return false;
+            return 0;
         }
 
-	return true;
+	return 1;
 }
 
 static int DrawGLScene()
@@ -605,14 +557,6 @@ static int DrawGLScene()
 	/* Set camera position (by translating the world in the opposite direction */
 	glLoadIdentity();
 	glTranslatef(-camera.x,-camera.y,camera.z+camera.SpeedVar);
-
-	// Spelplanen
-	// Hmm, nu ska vi rita upp spelplanen... sen ska den optimeras så den bara ritar upp det nödvändiga...
-
-	//glDisable(GL_COLOR_MATERIAL);
-
-	// Debugging
-
 
 	if(blendcolor>0.0f)
 		glEnable(GL_BLEND);
@@ -648,11 +592,6 @@ static int DrawGLScene()
 	}
 
 
-	// Ritar upp bil(en/arna) --------------------------------
-
-	// GAAAH!!!
-	// öj, det fungerar... Men det fungerar nog inte om man ska ha fler bilar... <- Nuså. :p
-
         car_render(&bil);
 	if (Network) {
 		for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
@@ -661,15 +600,12 @@ static int DrawGLScene()
 		}
 	}
 
-	// Rita upp gubbbananerna...
-	// Hoho! De SNURRAR!!! :)))))
-
 	if(!Network) {
 		for(loop1=0;loop1<nrgubbar;loop1++) {
 		    gubbe_render(&gubbar[loop1]);
 		}
 
-	} // !Network
+	}
 
         hud_set_damage(bil.helhet);
 
@@ -679,10 +615,7 @@ static int DrawGLScene()
             /* TODO */
 	}
 
-	return true;
-
-	// TYp.
-
+	return 1;
 }
 
 static void peer_send_line(const char *nick, const char *input) {
@@ -695,66 +628,76 @@ static void input_send_line(const char *input) {
 	hud_printf("Me> %s", input);
 }
 
-static int handle_input_field(SDL_keysym key, int type) {
-    if(!hud_input_field_active())
-        return 0;
+struct {
+    char *text;
+    int length;
+} input_field_data;
 
-    static const int input_max = 80;
-    static char *input_field = NULL;
-    static int input_length = 0;
+static void input_field_activate() {
+    hud_show_input_field(1);
+
+    if(input_field_data.text == NULL) {
+        input_field_data.text = (char*)malloc(input_field_max_length+1);
+        input_field_data.text[0] = '\0';
+        input_field_data.length = 0;
+    }
+
+    SDL_StartTextInput();
+}
+
+static void input_field_deactivate() {
+    SDL_StopTextInput();
+    free(input_field_data.text);
+    input_field_data.text = NULL;
+    hud_update_input_field("");
+    hud_show_input_field(0);
+}
+
+static int input_field_is_active() {
+    return hud_input_field_active();
+}
+
+static int input_field_key_event(SDL_Keysym key, int type) {
+    if(!input_field_is_active())
+        return 0;
 
     if(type == SDL_KEYUP) {
         return 0;
     }
 
-    if(input_field == NULL) {
-        input_field = (char*)malloc(input_max+1);
-        input_field[0] = '\0';
-        input_length = 0;
+    if(key.scancode == SDL_SCANCODE_ESCAPE) {
+        input_field_deactivate();
+    } else if(key.scancode == SDL_SCANCODE_BACKSPACE && input_field_data.length > 0) {
+        /* FIXME: utf-8 */
+        input_field_data.text[--input_field_data.length] = '\0';
+        hud_update_input_field(input_field_data.text);
+    } else if(key.scancode == SDL_SCANCODE_RETURN) {
+        if(input_field_data.length > 0)
+            input_send_line(input_field_data.text);
+
+        input_field_deactivate();
     }
 
-    if(key.sym == SDLK_ESCAPE) {
-        free(input_field);
-        input_field = NULL;
-        hud_show_input_field(0);
-    } else if(key.sym == SDLK_BACKSPACE && input_length > 0) {
-        input_field[--input_length] = '\0';
-        hud_update_input_field(input_field);
-    } else if(key.sym == SDLK_RETURN) {
-        if(input_length > 0)
-            input_send_line(input_field);
+    return 1; /* We handled the key (or should ignore it), stop processing it. */
+}
 
-        free(input_field);
-        input_field = NULL;
-        hud_update_input_field("");
-        hud_show_input_field(0);
-    } else if(input_length < input_max) {
-        /* TODO: We should just go UTF-8, I guess. */
-
-        char c = 0;
-        if((key.sym >= 'a' && key.sym <= 'z')) {
-            c = key.sym;
-            if(key.mod & KMOD_SHIFT)
-                c -= 'a' - 'A';
-        } else if((key.sym >= 0x20 && key.sym <= 0x7e) ||
-                  (key.sym >= 0xc0 && key.sym <= 0xff)) {
-                  c = key.sym;
-        }
-
-        if(c != 0) {
-            input_field[input_length++] = c;
-            input_field[input_length] = '\0';
-            hud_update_input_field(input_field);
-        }
+static int input_field_add_text(char *text) {
+    if(!input_field_is_active()) {
+        printf("BUG: input_field_add_text called when input field inactive.\n");
+        return 0;
     }
 
-    return 1; /* We handled the key, stop processing it. */
+    size_t len = strlen(text);
+    if(input_field_data.length + len < input_field_max_length) {
+        strcat(input_field_data.text, text);
+        input_field_data.length += len;
+        hud_update_input_field(input_field_data.text);
+        return 1;
+    }
+
+    return 0;
 }
 
-static void event_handle_resize(SDL_ResizeEvent *resize) {
-    SDL_SetVideoMode(resize->w, resize->h, sdl_bpp, sdl_video_flags);
-    gl_resize(resize->w, resize->h);
-}
 
 static int CheckaEvents()
 {
@@ -763,20 +706,27 @@ static int CheckaEvents()
 	while( SDL_PollEvent( &event ) ){
 		switch( event.type ){
 		case SDL_KEYDOWN:
-			if(!handle_input_field(event.key.keysym, SDL_KEYDOWN))
-			    keys[event.key.keysym.sym]=true;
+			if(!input_field_key_event(event.key.keysym, SDL_KEYDOWN))
+				keys[event.key.keysym.scancode]=1;
 			break;
 
 		case SDL_KEYUP:
-			handle_input_field(event.key.keysym, SDL_KEYUP);
-			keys[event.key.keysym.sym]=false;
+		    //input_field_key_event(event.key.keysym, SDL_KEYUP);
+			keys[event.key.keysym.scancode]=0;
 			break;
 
-		case SDL_VIDEORESIZE:
-			event_handle_resize(&event.resize);
+		case SDL_WINDOWEVENT:
+			switch (event.window.event) {
+			case SDL_WINDOWEVENT_RESIZED:
+				gl_resize(event.window.data1, event.window.data2);
+				break;
+			}
 			break;
 
-			/* SDL_QUIT event (window close) */
+		case SDL_TEXTINPUT:
+			input_field_add_text(event.text.text);
+			break;
+
 		case SDL_QUIT:
 			return 1;
 			break;
@@ -892,10 +842,10 @@ static int parse_options(int argc, char *argv[])
 			exit(42);
 			break;
 		case 'S':
-			sound = false;
+			sound = 0;
 			break;
 		case 'M':
-			sound_music = false;
+			sound_music = 0;
 			break;
 		default:
 			printf("?? getopt returned character code 0x%x ??\n", opt);
@@ -936,8 +886,6 @@ static void opponents_init() {
 
 int main(int argc, char *argv[])
 {
-	// Voila, en slumpgenerator... då var det bara collisiondetection grejjen kvar...
-	// den förbannade doningen FUNGERAR INTE!
 	srand(time(NULL));
 
 	char mbuf[1024];
@@ -977,16 +925,13 @@ int main(int argc, char *argv[])
 						     // Jag lovar!
 	world.ntextures = sizeof(texture_filenames) / sizeof(char *);
 
-	// Här är den första delen av porten....
-
-	// Nollställ knapp-arrayen...
 	int tmpk;
 	for(tmpk=0;tmpk<350;tmpk++)
-		keys[tmpk]=false;
+		keys[tmpk]=0;
 
-	SDL_Surface *screen;
+	SDL_Window *screen;
 
-	bool done=false;
+	int done=0;
 
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)<0) {
 		printf("Kunde inte initialisera SDL!\n");
@@ -995,30 +940,36 @@ int main(int argc, char *argv[])
 
 	atexit(SDL_Quit);
 
+	SDL_StopTextInput();
+
 	network_init();
 
-	Network=false;
+	Network=0;
 
 	if (server_addr != NULL) {
 		if (network_connect(server_addr, server_port, nick, proto_only)) {
 			fprintf(stderr, "Connect failed, exiting :(\n");
 			return 28;
 		}
-		Network = true;
+		Network = 1;
 	}
 
-	screen = SDL_SetVideoMode(initial_width, initial_height, sdl_bpp, sdl_video_flags);
+	screen = SDL_CreateWindow("gta2k4lin",
+				  SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+				  initial_width, initial_height,
+				  sdl_video_flags);
 	if (screen == NULL)
 	{
-		printf("SetVideoMode failed (EInar)\n");
+		printf("SDL_CreateWindow failed\n");
 		exit(1);
 	}
+
+	SDL_GLContext glcontext = SDL_GL_CreateContext(screen);
 
 	InitGL(initial_width, initial_height);
 	LoadCars();
 	LoadLevel();
 
-	// HUVUDLOOPEN!!! Detta är själva spelet!
 	// TODO: Implementera frameskip...
 	Uint32 TimerTicks;
 
@@ -1046,7 +997,7 @@ int main(int argc, char *argv[])
 
 		DrawGLScene();
                 hud_render();
-		SDL_GL_SwapBuffers();
+		SDL_GL_SwapWindow(screen);
 
 		if (Network) {
 			network_put_position(&(bil.o));
@@ -1063,5 +1014,5 @@ int main(int argc, char *argv[])
 
         SDL_Quit();
 
-	return 0; 	// SLYYT.
+	return 0;
 }
