@@ -17,6 +17,13 @@ static float gubbe_top_vertices[] = {
     GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 0.0f
 };
 
+static float gubbe_bottom_vertices[] = {
+    GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 1.0f, 0.0f,
+    GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 1.0f, 1.0f,
+    -GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
+    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f
+};
+
 static float gubbe_body_vertices[] = {
     /* Left */
     -GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
@@ -130,6 +137,9 @@ void init_gubbe(struct gubbe *g) {
 
             glBindTexture(GL_TEXTURE_2D,world.texIDs[g->ltexture]);
             draw_quads(gubbe_body_vertices, sizeof(gubbe_body_vertices)/(20*sizeof(float)));
+
+            glBindTexture(GL_TEXTURE_2D,world.texIDs[g->ltexture]);
+            draw_quads(gubbe_bottom_vertices, sizeof(gubbe_bottom_vertices)/(20*sizeof(float)));
         glEndList();
     }
 }
