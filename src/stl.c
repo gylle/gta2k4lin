@@ -26,6 +26,7 @@
 #include <GL/gl.h>
 
 #include "stl.h"
+#include "linmath.h"
 
 struct stlb_header {
     unsigned char header[80];
@@ -42,37 +43,6 @@ struct stlb_triangle {
 
 static const int szheader = sizeof(char)*80 + sizeof(uint32_t);
 static const int sztriangle = sizeof(GLfloat)*12 + sizeof(char)*2;
-
-static float vec3_length(float v[3])
-{
-    return sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-}
-
-static void vec3_sub(float v1[3], float v2[3], float r[3])
-{
-    r[0] = v1[0] - v2[0];
-    r[1] = v1[1] - v2[1];
-    r[2] = v1[2] - v2[2];
-}
-
-static void vec3_cross(float v1[3], float v2[3], float r[3])
-{
-    r[0] = v1[1]*v2[2] - v1[2]*v2[1];
-    r[1] = v1[2]*v2[0] - v1[0]*v2[2];
-    r[2] = v1[0]*v2[1] - v1[1]*v2[0];
-}
-
-static void vec3_scalar(float v[3], float s, float result[3])
-{
-    result[0] = v[0]*s;
-    result[1] = v[1]*s;
-    result[2] = v[2]*s;
-}
-
-static void vec3_normalize(float v[3], float normalized[3])
-{
-    vec3_scalar(v, 1/vec3_length(v), normalized);
-}
 
 static void *loadFile(const char *filename)
 {
@@ -136,11 +106,11 @@ struct stl_model *load_stl_model(const char *filename)
         struct stlb_triangle *t =
             (struct stlb_triangle*)(filedata + szheader + sztriangle*i);
 
-        float vector1[3], vector2[3], normal[3];
-        vec3_sub(t->v1, t->v2, vector1);
-        vec3_sub(t->v3, t->v2, vector2);
-        vec3_cross(vector1, vector2, normal);
-        vec3_normalize(normal, normal);
+        vec3 vector1, vector2, normal;
+        vec3_sub(vector1, t->v1, t->v2);
+        vec3_sub(vector2, t->v3, t->v2);
+        vec3_mul_cross(normal, vector1, vector2);
+        vec3_norm(normal, normal);
 
         int j;
         for(j = 0; j < 3; j++)
