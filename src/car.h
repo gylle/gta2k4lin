@@ -5,8 +5,11 @@
 
 #include "Bullet-C-Api.h"
 #include "btwrap.h"
+#include "linmath.h"
 
 struct car {
+	struct object o;
+
 	// Texturer, nr1: tak. nr2: sidor. nr3: fram. nr4: bak:
 	int t1,t2,t3,t4;
 	// Hur hel bilen är(%). 100 är helhel, 0 är heltrasig.
@@ -14,14 +17,12 @@ struct car {
 	// Poäng. I Multiplayer spel hur många "frags" man har...
 	int Points;
 
-	struct object o;
 	struct stl_model *model;
 
 	plCollisionShapeHandle bt_shape;
 	plRigidBodyHandle bt_rbody;
 	plRaycastVehicleHandle bt_vehicle;
 
-	float rotation[16];
 	float engineForce, brakeForce, steering;
 };
 

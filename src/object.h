@@ -1,7 +1,11 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#include "linmath.h"
+
 struct object {
+	mat4x4 m_rotation;
+
 	union {
 		float x;
 		unsigned long xi;

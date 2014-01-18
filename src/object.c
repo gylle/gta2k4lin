@@ -1,7 +1,7 @@
 /*
- * lmq - process-local messaging queues
  *
  * Copyright Jonas Eriksson 2012
+ * Copyright David Hedberg 2014
  *
  *
  * This program is free software: you can redistribute it and/or modify

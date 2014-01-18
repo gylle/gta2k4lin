@@ -6,6 +6,9 @@
 
 #include "gubbe.h"
 #include "main.h"
+#include "world.h"
+#include "gl.h"
+#include "linmath.h"
 
 static const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
 static GLuint GubbeDispList = 0;
@@ -56,7 +59,7 @@ static void gubbe_get_world_transform(void *data, plVector3 v, plReal *m) {
     v[1] = g->o.y;
     v[2] = g->o.z;
 
-    memcpy(m, g->rotation, sizeof(float)*16);
+    memcpy(m, g->o.m_rotation, sizeof(float)*16);
 }
 
 static void gubbe_set_world_transform(void *data, plVector3 v, plReal *m) {
@@ -74,10 +77,10 @@ static void gubbe_set_world_transform(void *data, plVector3 v, plReal *m) {
     g->o.y = v[1];
     g->o.z = v[2];
 
-    memcpy(g->rotation, m, sizeof(float)*16);
+    memcpy(g->o.m_rotation, m, sizeof(float)*16);
 
     /* FIXME? */
-    g->rotation[15] = 1.0f;
+    g->o.m_rotation[3][3] = 1.0f;
 }
 
 void init_gubbe(struct gubbe *g) {
@@ -95,8 +98,8 @@ void init_gubbe(struct gubbe *g) {
     g->o.size_z=GUBBSIZE_Z;
     /* object_update_circle(&(g->o)); */
 
-    g->o.x=(float)((rand() % world.nrcubex*BSIZE*2)*100)/100.0f;
-    g->o.y=(float)((rand() % world.nrcubey*BSIZE*2)*100)/100.0f;
+    g->o.x=(float)((rand() % world.map.nrcubex*BSIZE*2)*100)/100.0f;
+    g->o.y=(float)((rand() % world.map.nrcubey*BSIZE*2)*100)/100.0f;
     g->o.angle=rand() % 360;
 
     g->o.z = BSIZE + GUBBSIZE_Z/2.0f + 0.1f;
@@ -112,17 +115,14 @@ void init_gubbe(struct gubbe *g) {
     void *user_data = NULL; /* 1.0f */
     g->bt_shape = plNewBoxShape(GUBBSIZE_X/2.0f, GUBBSIZE_Y/2.0f, GUBBSIZE_Z/2.0f);
 
-    g->rotation[0] = 1.0f; g->rotation[1] = 0.0f; g->rotation[2] = 0.0f; g->rotation[3] = 0.0f;
-    g->rotation[4] = 0.0f; g->rotation[5] = 1.0f; g->rotation[6] = 0.0f; g->rotation[7] = 0.0f;
-    g->rotation[8] = 0.0f; g->rotation[9] = 0.0f; g->rotation[10] = 1.0f; g->rotation[11] = 0.0f;
-    g->rotation[12] = 0.0f; g->rotation[13] = 0.0f; g->rotation[14] = 0.0f; g->rotation[15] = 1.0f;
+    mat4x4_identity((vec4*)g->o.m_rotation);
 
     g->bt_rbody = plCreateRigidBodyWithCallback(user_data, bt_weight, g->bt_shape,
                                                 &gubbe_get_world_transform,
                                                 &gubbe_set_world_transform,
                                                 g);
 
-    plAddRigidBody(dynamics_world, g->bt_rbody);
+    plAddRigidBody(world.dynamics_world, g->bt_rbody);
     /* printf("Added gubbe-rbody %p\n", g->bt_rbody); */
 
     if(GubbeDispList == 0) {
@@ -150,7 +150,7 @@ void gubbe_render(struct gubbe *g) {
     // HAHA!!! Det gick till slut! :)
     glTranslatef(g->o.x,g->o.y,g->o.z);
     /* glRotatef((float)g->o.angle,0.0f,0.0f,1.0f); */
-    glMultMatrixf(g->rotation);
+    glMultMatrixf(g->o.m_rotation);
 
     if(g->alive) {
         /* if(!NoBlend) */

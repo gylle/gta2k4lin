@@ -2,7 +2,7 @@ TARGETS=gta2k4lin
 
 BULLETSRC=bullet/src
 
-C_SOURCES=src/main.c src/sound.c src/network.c src/hud.c src/lmq.c src/object.c src/stl.c src/car.c src/gubbe.c
+C_SOURCES=src/main.c src/world.c src/gl.c src/sound.c src/network.c src/hud.c src/lmq.c src/object.c src/stl.c src/car.c src/gubbe.c src/console.c
 CXX_SOURCES=src/btwrap.cpp
 
 CC=gcc
@@ -44,7 +44,7 @@ dist:
 depend:
 	make -B Makefile.depend
 
-gta2k4lin: src/main.o src/sound.o src/network.o src/hud.o src/lmq.o src/object.o src/stl.o src/car.o src/gubbe.o src/btwrap.o
+gta2k4lin: src/main.o src/gl.o src/world.o src/sound.o src/network.o src/hud.o src/lmq.o src/object.o src/stl.o src/car.o src/gubbe.o src/btwrap.o src/console.o
 	$(CXX) -o $@ $^ $(CFLAGS) $(LIBS)
 
 Makefile.depend: $(CXX_SOURCES) $(C_SOURCES)

@@ -5,8 +5,11 @@
 
 #include "Bullet-C-Api.h"
 #include "btwrap.h"
+#include "linmath.h"
 
 struct gubbe {
+	struct object o;
+
 	// Texturer. ltexture2=huvudet. ltexture=resten. dtexturer=texture då gubben dött...
 	int ltexture, ltexture2,  dtexture;
 	// Fartsaker...
@@ -16,11 +19,11 @@ struct gubbe {
 	// Tid tills han lever igen...
 	int atimer;
 
-	struct object o;
 
 	plCollisionShapeHandle bt_shape;
 	plRigidBodyHandle bt_rbody;
-	float rotation[16];
+	//float rotation[16];
+	mat4x4 rotation;
 };
 
 void init_gubbe(struct gubbe *g);

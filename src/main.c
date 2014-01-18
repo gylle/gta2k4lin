@@ -37,36 +37,26 @@
 #include <time.h>
 #include <math.h>
 #include <GL/gl.h>			// Header File For The OpenGL32 Library
-#include <GL/glu.h>			// Header File For The GLu32 Library
 #include <SDL.h>
 #include <sys/time.h>
 #include <sys/param.h>
 #include <getopt.h>
 
-#include "SDL_image.h"
-
-#include "Bullet-C-Api.h"
-#include "btwrap.h"
-
 #include "main.h"
+#include "world.h"
 #include "sound.h"
 #include "network.h"
 #include "hud.h"
 #include "object.h"
-#include "models.h"
 #include "stl.h"
 #include "car.h"
 #include "gubbe.h"
+#include "gl.h"
+#include "console.h"
 
 int initial_width = 640;
 int initial_height = 480;
 const int sdl_video_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
-
-#define nrgubbar 100
-
-/* Bullet */
-plPhysicsSdkHandle physics_sdk = 0;
-plDynamicsWorldHandle dynamics_world = 0;
 
 int keys[SDL_NUM_SCANCODES];			// Array Used For The Keyboard Routine
 
@@ -86,336 +76,13 @@ int proto_only = 0;
 int debugBlend=0;
 float blendcolor;
 
-static const int input_field_max_length = 80;
-static void input_field_activate();
-
-struct cube {
-	// Vilken textur som ska mappas till kuben...
-	int texturenr;
-	int in_use;
-	// Ett namn på stället man är.
-	const char* beskrivning;
-
-	struct object o;
-};
-
-struct camera {
-    GLfloat x, y, z;
-    GLfloat SpeedVar;
-};
-
-struct camera camera;
-
-static void camera_init() {
-    camera.x = 0.0f;
-    camera.y = 0.0f;
-    camera.z = -30.0f;
-}
-
-static void camera_move_for_car(struct car *car) {
-    camera.x = car->o.x;
-    camera.y = car->o.y;
-
-    // Få kameran att höjas och sänkas beroende på hastigheten...
-    GLfloat tmpSpeedVar=car->o.speed*5;
-    if(tmpSpeedVar>0)
-        tmpSpeedVar=-tmpSpeedVar;
-
-    if(tmpSpeedVar>camera.SpeedVar)
-        camera.SpeedVar+=0.4f;
-
-    if(tmpSpeedVar<camera.SpeedVar)
-        camera.SpeedVar-=0.4f;
-}
-
-struct spelare {
-	int points;
-	int krockar;
-	int runovers;
-};
-
-struct gubbe *gubbar; //[nrgubbar];
-struct spelare player;
-
-
-#define TEXTURE_PATH "data/"
-#define map_cube(world, x, y, z) world.map[((x) * (world).nrcubey + (y)) * (world).nrcubez + (z)]
-struct world world;
-
-void draw_quads(float vertices[], int count) {
-    /* Loosely modeled upon glDrawElements & co */
-
-    glBegin(GL_QUADS);
-        int i,j;
-        for(i = 0; i < count; i++) {
-            for(j = 0; j < 4; j++) {
-                int offset = i*5*4 + j*5;
-                glTexCoord2f(vertices[offset+3], vertices[offset+4]);
-                glVertex3f(vertices[offset], vertices[offset+1], vertices[offset+2]);
-            }
-        }
-    glEnd();
-}
-
-struct car bil;
-struct car opponent_cars[NETWORK_MAX_OPPONENTS];
-struct opponent opponents[NETWORK_MAX_OPPONENTS];
-
-static int LoadGLTextures()								// Load Bitmaps And Convert To Textures
-{
-	/* Load textures from file names in world */
-	world.texIDs = (GLuint *)calloc(world.ntextures, sizeof(GLuint));
-	if (world.texIDs == NULL) {
-		return 0;
-	}
-
-	char path_buf[PATH_MAX];
-
-	int i;
-	for (i = 0; i < world.ntextures; i++) {
-		snprintf(path_buf, PATH_MAX, "%s%s", TEXTURE_PATH,
-				world.texture_filenames[i]);
-		SDL_Surface *texture = IMG_Load(path_buf);
-		if (texture == NULL) {
-			return 0;
-		}
-
-		// Mmkay, så opengl räknar koordinater från nedre vänstra
-		// hörnet. Undrar om den gode ola roterade alla texturer i
-		// tgaloader-versionen :D
-		// Aja, vi fixar.
-		char tp[3];
-		char *pixels = (char *) texture->pixels;
-		int w = texture->w * 3;
-		unsigned int j, k, size = texture->w * texture->h * 3;
-		for (j = 0; j < size / 2; j += 3) {
-			memcpy(tp, &pixels[j], 3);
-			memcpy(&pixels[j], &pixels[size - j], 3);
-			memcpy(&pixels[size - j], tp, 3);
-		}
-		// Vafan, spegelvänt också?!
-		for (j = 0; j < texture->h * w; j += w) {
-			for (k = 0; k < w / 2; k += 3) {
-				memcpy(tp, &pixels[j + k], 3);
-				memcpy(&pixels[j + k], &pixels[j + w - k - 3], 3);
-				memcpy(&pixels[j + w - k - 3], tp, 3);
-			}
-		}
-
-		glGenTextures(1, &world.texIDs[i]);
-		glBindTexture(GL_TEXTURE_2D, world.texIDs[i]);
-		glTexImage2D(GL_TEXTURE_2D, 0, 3,
-				texture->w, texture->h, 0,
-				GL_BGR, GL_UNSIGNED_BYTE,
-				texture->pixels);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-				GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
-				GL_LINEAR);
-
-		SDL_FreeSurface(texture);
-	}
-
-	return 1;							// Return The Status
-}
-
-static int LoadLevel()
-{
-	// Allocate them cubes!
-	world.map = (struct cube *)calloc(world.nrcubex * world.nrcubey * world.nrcubez, sizeof(struct cube));
-	if (world.map == NULL)  {
-		return 0;
-	}
-	memset(world.map, 0, world.nrcubex * world.nrcubey * world.nrcubez *
-			sizeof(struct cube));
-
-	int loop1, loop2, loop3;
-
-	for(loop1=0;loop1<world.nrcubex;loop1++) {
-		for(loop2=0;loop2<world.nrcubey;loop2++) {
-			for(loop3=0;loop3<world.nrcubez;loop3++) {
-				map_cube(world, loop1, loop2, loop3).o.size_x=BSIZE * 2;
-				map_cube(world, loop1, loop2, loop3).o.size_y=BSIZE * 2;
-				map_cube(world, loop1, loop2, loop3).o.size_z=BSIZE * 2;
-				map_cube(world, loop1, loop2, loop3).o.x=loop1 * BSIZE * 2;
-				map_cube(world, loop1, loop2, loop3).o.y=loop2 * BSIZE * 2;
-				map_cube(world, loop1, loop2, loop3).o.z= -1 * loop3 * BSIZE * 2;
-				map_cube(world, loop1, loop2, loop3).texturenr=0;
-				map_cube(world, loop1, loop2, loop3).beskrivning="Testbeskrivning";
-				object_update_circle(&(map_cube(world, loop1, loop2, loop3).o));
-			}
-		}
-	}
-
-	map_cube(world, 0, 0, 0).o.z = BSIZE;
-	map_cube(world, 0, 0, 0).texturenr=1;
-
-	map_cube(world, 0, 1, 0).o.z = BSIZE * 2;
-	map_cube(world, 0, 1, 0).texturenr=1;
-
-	// Vägen -------------------------------
-	for(loop1=0;loop1<world.nrcubey;loop1++)
-		map_cube(world, 1, loop1, 0).texturenr=2;
-
-	for(loop1=0;loop1<world.nrcubey;loop1++)
-		map_cube(world, 2, loop1, 0).texturenr=3;
-
-	for(loop1=0;loop1<world.nrcubex;loop1++)
-		map_cube(world, loop1, world.nrcubey-2, 0).texturenr=8;
-
-	for(loop1=2;loop1<world.nrcubex;loop1++)
-		map_cube(world, loop1, world.nrcubey-3, 0).texturenr=9;
-
-	map_cube(world, 1, world.nrcubey-2, 0).texturenr=5;
-	map_cube(world, 2, world.nrcubey-2, 0).texturenr=6;
-	map_cube(world, 2, world.nrcubey-3, 0).texturenr=7;
-
-
-	// "Väggen" runtomkring
-	for(loop1=0;loop1<world.nrcubey;loop1++) {
-		map_cube(world, 0, loop1, 0).texturenr=4;
-		map_cube(world, 0, loop1, 0).o.z = BSIZE * 2;
-	}
-
-	for(loop1=0;loop1<world.nrcubey;loop1++) {
-		map_cube(world, world.nrcubex-1, loop1, 0).texturenr=4;
-		map_cube(world, world.nrcubex-1, loop1, 0).o.z = BSIZE * 2;
-	}
-
-	for(loop1=0;loop1<world.nrcubex;loop1++) {
-		map_cube(world, loop1, 0, 0).texturenr=4;
-		map_cube(world, loop1, 0, 0).o.z = BSIZE * 2;
-	}
-	for(loop1=0;loop1<world.nrcubex;loop1++) {
-		map_cube(world, loop1, world.nrcubey-1, 0).texturenr=4;
-		map_cube(world, loop1, world.nrcubey-1, 0).o.z = BSIZE * 2;
-	}
-
-	// Vi lägger in lite buskar
-	for(loop1=1;loop1<(world.nrcubey/2-1);loop1+=2) {
-		map_cube(world, world.nrcubex/2, loop1, 0).texturenr=15;
-		map_cube(world, world.nrcubex/2, loop1, 0).o.z = BSIZE * 2;
-	}
-
-	// Vägen in till mitten och den fina credits saken där.
-	for(loop1=3;loop1<=world.nrcubex/2;loop1++)
-		map_cube(world, loop1, world.nrcubey/2, 0).texturenr=7;
-
-	map_cube(world, world.nrcubex/2, world.nrcubey/2, 1).texturenr=10;
-	map_cube(world, world.nrcubex/2, world.nrcubey/2, 1).o.z = BSIZE * 2 * 2;
-
-        /* FIXME: Fult */
-        for(loop1=0;loop1<world.nrcubex;loop1++) {
-            for(loop2=0;loop2<world.nrcubey;loop2++) {
-                for(loop3=0;loop3<world.nrcubez;loop3++) {
-                    /* Bullet */
-                    plCollisionShapeHandle cube_shape;
-                    plRigidBodyHandle cube_rbody;
-                    void *user_data = NULL;
-
-                    cube_shape = plNewBoxShape(BSIZE, BSIZE, BSIZE);
-                    cube_rbody = plCreateRigidBody(user_data, 0.0f, cube_shape);
-
-                    float cube_pos[3];
-                    cube_pos[0] = map_cube(world, loop1, loop2, loop3).o.x;
-                    cube_pos[1] = map_cube(world, loop1, loop2, loop3).o.y;
-                    cube_pos[2] = map_cube(world, loop1, loop2, loop3).o.z;
-
-                    /* plVector3 == float[3] */
-                    plSetPosition(cube_rbody, cube_pos);
-
-                    plAddRigidBody(dynamics_world, cube_rbody);
-                }
-            }
-        }
-
-	return 1;
-}
-
-static int LoadCars()
-{
-	camera_init(&camera);
-
-	init_car(&bil);
-
-	// Kicka igång alla gubbar
-	gubbar = malloc(sizeof(struct gubbe)*nrgubbar);
-        memset(gubbar, 0, sizeof(struct gubbe)*nrgubbar);
-
-        printf("sizeof(struct gubbe): %ld\n", sizeof(struct gubbe));
-
-	int i;
-	for(i = 0; i < nrgubbar; i++) {
-            init_gubbe(&gubbar[i]);
-            printf("init_gubbe: %p:\n", &gubbar[i]);
-	}
-
-	return 1;
-}
-
-static void gl_resize(int width, int height) {
-
-    float ratio = (float) width / (float) height;
-
-    /* Setup our viewport. */
-    glViewport( 0, 0, width, height );
-
-    /*
-     * Change to the projection matrix and set
-     * our viewing volume.
-     */
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity( );
-    gluPerspective( 60.0, ratio, 1.0, 1024.0 );
-
-    glMatrixMode( GL_MODELVIEW );
-}
-
-static int InitGL(int width, int height)
-{
-	if (!LoadGLTextures())							// Jump To Texture Loading Routine ( NEW )
-	{
-		printf("Bananeinar, det verkar inte som om den vill ladda texturerna.");
-		exit(1);
-	}
-
-	SDL_GL_SetAttribute( SDL_GL_RED_SIZE, 5 );
-	SDL_GL_SetAttribute( SDL_GL_GREEN_SIZE, 5 );
-	SDL_GL_SetAttribute( SDL_GL_BLUE_SIZE, 5 );
-	SDL_GL_SetAttribute( SDL_GL_DEPTH_SIZE, 16 );
-	SDL_GL_SetAttribute( SDL_GL_DOUBLEBUFFER, 1 );
-
-
-	/* Our shading model--Gouraud (smooth). */
-	glShadeModel( GL_SMOOTH );
-
-	/* Culling. */
-	glFrontFace( GL_CW );
-	glCullFace( GL_BACK );
-	glEnable( GL_CULL_FACE );
-
-	/* Set the clear color. */
-	glClearColor( 0, 0, 1, 0 );
-
-	glShadeModel(GL_SMOOTH);							// Enable Smooth Shading
-	glClearDepth(1.0f);									// Depth Buffer Setup
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-	glEnable(GL_DEPTH_TEST);							// Enables Depth Testing
-	glDepthFunc(GL_LEQUAL);								// The Type Of Depth Testing To Do
-	glBlendFunc(GL_SRC_ALPHA,GL_ONE);
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);	// Really Nice Perspective Calculations
-
-	gl_resize(width, height);
-
-	return 1;										// Initialization Went OK
-}
 
 static int RespondToKeys()
 {
         static int broms_in_progress = 0;
 
 	if(keys[SDL_SCANCODE_SPACE]) {
-		bil.brakeForce = 200.0f;
+		world.bil.brakeForce = 200.0f;
 
 		if (!broms_in_progress) {
 			sound_play(broms);
@@ -424,32 +91,32 @@ static int RespondToKeys()
 	}
 	else {
 		broms_in_progress = 0;
-		bil.brakeForce = 0.0f;
+		world.bil.brakeForce = 0.0f;
 	}
 
         if(keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_LEFT]) {
             if(keys[SDL_SCANCODE_RIGHT]) {
-                bil.steering -= 0.5f;
+                world.bil.steering -= 0.5f;
             } else if(keys[SDL_SCANCODE_LEFT]) {
-                bil.steering += 0.5f;
+                world.bil.steering += 0.5f;
             }
 
-            if(bil.steering > 0.7f)
-                bil.steering = 0.7f;
-            else if(bil.steering < -0.7f)
-                bil.steering = -0.7f;
+            if(world.bil.steering > 0.7f)
+                world.bil.steering = 0.7f;
+            else if(world.bil.steering < -0.7f)
+                world.bil.steering = -0.7f;
 
         } else {
 
             /* Go straight */
-            bil.steering *= 0.05f;
+            world.bil.steering *= 0.05f;
         }
 
 
-	if(bil.helhet==0) {
+	if(world.bil.helhet==0) {
 		if(keys[SDL_SCANCODE_RETURN]) {
-			bil.helhet=100;
-			bil.t1=1;
+			world.bil.helhet=100;
+			world.bil.t1=1;
 			/* mbil.Points++; */
 
 			sound_cont_stop(brinner, 1);
@@ -461,27 +128,27 @@ static int RespondToKeys()
 		}
 	}
 
-        if(bil.helhet) {
+        if(world.bil.helhet) {
             if(keys[SDL_SCANCODE_UP]) {
-                bil.engineForce += 50.0f;
+                world.bil.engineForce += 50.0f;
             } else if(keys[SDL_SCANCODE_DOWN]) {
-                bil.engineForce -= 50.0f;
+                world.bil.engineForce -= 50.0f;
             } else {
-                bil.engineForce *= 0.2f;
+                world.bil.engineForce *= 0.2f;
             }
 
-            if(bil.engineForce > 1000.0f)
-                bil.engineForce = 1000.0f;
+            if(world.bil.engineForce > 1000.0f)
+                world.bil.engineForce = 1000.0f;
         }
 
         /* FIXME */
-        plRaycastVehicle_ApplyEngineForce(bil.bt_vehicle, bil.engineForce, 2);
-        plRaycastVehicle_ApplyEngineForce(bil.bt_vehicle, bil.engineForce, 3);
-        plRaycastVehicle_SetBrake(bil.bt_vehicle, bil.brakeForce, 2);
-        plRaycastVehicle_SetBrake(bil.bt_vehicle, bil.brakeForce, 3);
+        plRaycastVehicle_ApplyEngineForce(world.bil.bt_vehicle, world.bil.engineForce, 2);
+        plRaycastVehicle_ApplyEngineForce(world.bil.bt_vehicle, world.bil.engineForce, 3);
+        plRaycastVehicle_SetBrake(world.bil.bt_vehicle, world.bil.brakeForce, 2);
+        plRaycastVehicle_SetBrake(world.bil.bt_vehicle, world.bil.brakeForce, 3);
 
-        plRaycastVehicle_SetSteeringValue(bil.bt_vehicle, bil.steering, 0);
-        plRaycastVehicle_SetSteeringValue(bil.bt_vehicle, bil.steering, 1);
+        plRaycastVehicle_SetSteeringValue(world.bil.bt_vehicle, world.bil.steering, 0);
+        plRaycastVehicle_SetSteeringValue(world.bil.bt_vehicle, world.bil.steering, 1);
 
 
         if(keys[SDL_SCANCODE_U]) {
@@ -489,14 +156,14 @@ static int RespondToKeys()
             force[0] = 0.0f; force[1] = 0.0f; force[2] = 50.0f;
             rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
 
-            plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+            plRigidBody_ApplyForce(world.bil.bt_rbody, force, rel_pos);
         }
         if(keys[SDL_SCANCODE_N]) {
             plVector3 force, rel_pos;
             force[0] = 0.0f; force[1] = 0.0f; force[2] = -50.0f;
             rel_pos[0] = 0.0f; rel_pos[1] = 0.0f; rel_pos[2] = 0.0f;
 
-            plRigidBody_ApplyForce(bil.bt_rbody, force, rel_pos);
+            plRigidBody_ApplyForce(world.bil.bt_rbody, force, rel_pos);
         }
 
 	if(keys[SDL_SCANCODE_TAB]) {
@@ -508,23 +175,23 @@ static int RespondToKeys()
 
 	// Styr kameran
 	if(keys[SDL_SCANCODE_F5]) {
-		camera.z-=0.5f;
+		world.camera.z-=0.5f;
 	}
 	if(keys[SDL_SCANCODE_F6]) {
-		camera.z+=0.5f;
+		world.camera.z+=0.5f;
 	}
 
 	if(keys[SDL_SCANCODE_F8]) {
-		camera.x+=0.9f;
+		world.camera.x+=0.9f;
 	}
 	if(keys[SDL_SCANCODE_F7]) {
-		camera.x-=0.9f;
+		world.camera.x-=0.9f;
 	}
 	if(keys[SDL_SCANCODE_F3]) {
-		camera.y+=0.9f;
+		world.camera.y+=0.9f;
 	}
 	if(keys[SDL_SCANCODE_F4]) {
-		camera.y-=0.9f;
+		world.camera.y-=0.9f;
 	}
 
 	if(keys[SDL_SCANCODE_F9])
@@ -548,155 +215,11 @@ static int RespondToKeys()
 	return 1;
 }
 
-static int DrawGLScene()
-{
-	int i;
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-
-	/* Set camera position (by translating the world in the opposite direction */
-	glLoadIdentity();
-	glTranslatef(-camera.x,-camera.y,camera.z+camera.SpeedVar);
-
-	if(blendcolor>0.0f)
-		glEnable(GL_BLEND);
-	if(blendcolor==0.0f)
-		glDisable(GL_BLEND);
-
-	glColor4f(1.0f,1.0f,1.0f,blendcolor);
-
-	int loop1, loop2, loop3;
-
-	// Ritar upp banan -----------------------------
-	float lp1bstmp,lp2bstmp,ztmp;
-	for(loop1=0; loop1<world.nrcubex; loop1++) {
-		for(loop2=0; loop2<world.nrcubey; loop2++) {
-			for(loop3=0; loop3<world.nrcubez; loop3++) {
-
-
-				lp1bstmp=(float)loop1*(BSIZE*2);
-				lp2bstmp=(float)loop2*(BSIZE*2);
-				ztmp=map_cube(world, loop1, loop2, loop3).o.z;
-
-				glPushMatrix();
-				glTranslatef(lp1bstmp, lp2bstmp, ztmp);
-
-				glEnable(GL_TEXTURE_2D);
-				glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, loop1, loop2, loop3).texturenr]);
-
-				draw_quads(map_cube_vertices, sizeof(map_cube_vertices)/(20*sizeof(float)));
-
-				glPopMatrix();
-			}
-		}
-	}
-
-
-        car_render(&bil);
-	if (Network) {
-		for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
-			if (opponents[i].in_use)
-				car_render(&(opponent_cars[i]));
-		}
-	}
-
-	if(!Network) {
-		for(loop1=0;loop1<nrgubbar;loop1++) {
-		    gubbe_render(&gubbar[loop1]);
-		}
-
-	}
-
-        hud_set_damage(bil.helhet);
-
-	if(!Network) {
-            hud_set_score(player.runovers);
-	} else {
-            /* TODO */
-	}
-
-	return 1;
-}
 
 static void peer_send_line(const char *nick, const char *input) {
 	hud_printf("%s> %s", nick, input);
 }
 
-static void input_send_line(const char *input) {
-	if (Network)
-		network_amsg_send((char*)input);
-	hud_printf("Me> %s", input);
-}
-
-struct {
-    char *text;
-    int length;
-} input_field_data;
-
-static void input_field_activate() {
-    hud_show_input_field(1);
-
-    if(input_field_data.text == NULL) {
-        input_field_data.text = (char*)malloc(input_field_max_length+1);
-        input_field_data.text[0] = '\0';
-        input_field_data.length = 0;
-    }
-
-    SDL_StartTextInput();
-}
-
-static void input_field_deactivate() {
-    SDL_StopTextInput();
-    free(input_field_data.text);
-    input_field_data.text = NULL;
-    hud_update_input_field("");
-    hud_show_input_field(0);
-}
-
-static int input_field_is_active() {
-    return hud_input_field_active();
-}
-
-static int input_field_key_event(SDL_Keysym key, int type) {
-    if(!input_field_is_active())
-        return 0;
-
-    if(type == SDL_KEYUP) {
-        return 0;
-    }
-
-    if(key.scancode == SDL_SCANCODE_ESCAPE) {
-        input_field_deactivate();
-    } else if(key.scancode == SDL_SCANCODE_BACKSPACE && input_field_data.length > 0) {
-        /* FIXME: utf-8 */
-        input_field_data.text[--input_field_data.length] = '\0';
-        hud_update_input_field(input_field_data.text);
-    } else if(key.scancode == SDL_SCANCODE_RETURN) {
-        if(input_field_data.length > 0)
-            input_send_line(input_field_data.text);
-
-        input_field_deactivate();
-    }
-
-    return 1; /* We handled the key (or should ignore it), stop processing it. */
-}
-
-static int input_field_add_text(char *text) {
-    if(!input_field_is_active()) {
-        printf("BUG: input_field_add_text called when input field inactive.\n");
-        return 0;
-    }
-
-    size_t len = strlen(text);
-    if(input_field_data.length + len < input_field_max_length) {
-        strcat(input_field_data.text, text);
-        input_field_data.length += len;
-        hud_update_input_field(input_field_data.text);
-        return 1;
-    }
-
-    return 0;
-}
 
 
 static int CheckaEvents()
@@ -871,79 +394,35 @@ static int parse_options(int argc, char *argv[])
 	return optind;
 }
 
-static void opponents_init() {
-	int i;
-
-	for (i = 0; i < NETWORK_MAX_OPPONENTS; i++) {
-		opponents[i].o = &(opponent_cars[i].o);
-		opponent_cars[i].t1=1;
-		opponent_cars[i].t2=1;
-		opponent_cars[i].t3=1;
-		opponent_cars[i].t4=1;
-		car_set_model(&opponent_cars[i]);
-	}
-}
 
 int main(int argc, char *argv[])
 {
-	srand(time(NULL));
-
+	SDL_Window *window;
 	char mbuf[1024];
 
+	srand(time(NULL));
+
 	parse_options(argc, argv);
-
-        /* Bullet */
-        physics_sdk = plNewBulletSdk();
-        dynamics_world = plCreateDynamicsWorld(physics_sdk);
-        plDynamicsWorld_SetGravity(dynamics_world, 0, 0, -30.0f);
-
-	// C++ SUGER SÅ MYCKET!!!1
-	world.nrcubex = 20;
-	world.nrcubey = 20;
-	world.nrcubez = 2;
-	// De texturer som på nåt sätt ska laddas är:
-	const char *texture_filenames[] = {
-		"test.tga",
-		"carroof.tga",
-		"road1.tga",
-		"road2.tga",
-		"building1.tga",
-		"road3.tga",
-		"road4.tga",
-		"road5.tga",
-		"road6.tga",
-		"road7.tga",
-		"dhcred.tga",
-		"gubbel.tga",
-		"gubbed.tga",
-		"gubbel2.tga",
-		"carroof2.tga",
-		"buske.tga"
-	};
-	world.texture_filenames = texture_filenames; // Vi lämnar aldrig detta
-						     // scope, så det funkar.
-						     // Jag lovar!
-	world.ntextures = sizeof(texture_filenames) / sizeof(char *);
-
-	int tmpk;
-	for(tmpk=0;tmpk<350;tmpk++)
-		keys[tmpk]=0;
-
-	SDL_Window *screen;
-
-	int done=0;
 
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)<0) {
 		printf("Kunde inte initialisera SDL!\n");
 		exit(1);
 	}
-
 	atexit(SDL_Quit);
-
 	SDL_StopTextInput();
 
-	network_init();
+	window = SDL_CreateWindow("gta2k4lin",
+				  SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+				  initial_width, initial_height,
+				  sdl_video_flags);
+	if (window == NULL)
+	{
+		printf("SDL_CreateWindow failed\n");
+		exit(1);
+	}
 
+
+	network_init();
 	Network=0;
 
 	if (server_addr != NULL) {
@@ -954,34 +433,22 @@ int main(int argc, char *argv[])
 		Network = 1;
 	}
 
-	screen = SDL_CreateWindow("gta2k4lin",
-				  SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-				  initial_width, initial_height,
-				  sdl_video_flags);
-	if (screen == NULL)
-	{
-		printf("SDL_CreateWindow failed\n");
-		exit(1);
-	}
 
-	SDL_GLContext glcontext = SDL_GL_CreateContext(screen);
+	gl_init(window, initial_width, initial_height);
 
-	InitGL(initial_width, initial_height);
-	LoadCars();
-	LoadLevel();
-
-	// TODO: Implementera frameskip...
-	Uint32 TimerTicks;
+	world_init();
 
         hud_init();
 	if (sound)
 		sound_init(sound_music);
-	opponents_init();
 
+	// TODO: Implementera frameskip...
+	Uint32 TimerTicks;
+	int done=0;
 	while(!done)
 	{
 		/* Bullet */
-		plStepSimulation(dynamics_world, 1.0f/60.0f);
+		plStepSimulation(world.dynamics_world, 1.0f/60.0f);
 
 		TimerTicks=SDL_GetTicks();
 		if(CheckaEvents()==1) {
@@ -993,15 +460,15 @@ int main(int argc, char *argv[])
                         done = 1;
                 }
 
-                camera_move_for_car(&bil);
+                camera_move_for_car(&world.bil);
 
-		DrawGLScene();
+		gl_drawscene();
                 hud_render();
-		SDL_GL_SwapWindow(screen);
+		SDL_GL_SwapWindow(window);
 
 		if (Network) {
-			network_put_position(&(bil.o));
-			network_get_positions(opponents);
+			network_put_position(&(world.bil.o));
+			network_get_positions(world.opponents);
 
 			unsigned long id;
 			while (network_amsg_recv(mbuf, &id, 1024) > 0) {

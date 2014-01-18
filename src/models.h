@@ -1,8 +1,9 @@
 /* x, y, z, texcoordx, texcoordy */
 
-#include "car.h"
-#include "gubbe.h"
-#include "main.h"
+/* #include "car.h" */
+/* #include "gubbe.h" */
+/* #include "main.h" */
+#include "world.h"
 
 /* TODO: They are already centered in x/y, do the same for z. */
 
