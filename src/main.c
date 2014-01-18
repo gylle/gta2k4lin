@@ -429,15 +429,15 @@ static int RespondToKeys()
 
         if(keys[SDL_SCANCODE_RIGHT] || keys[SDL_SCANCODE_LEFT]) {
             if(keys[SDL_SCANCODE_RIGHT]) {
-                bil.steering -= 0.2f;
+                bil.steering -= 0.5f;
             } else if(keys[SDL_SCANCODE_LEFT]) {
-                bil.steering += 0.2f;
+                bil.steering += 0.5f;
             }
 
-            if(bil.steering > 0.6f)
-                bil.steering = 0.6f;
-            else if(bil.steering < -0.6f)
-                bil.steering = -0.6f;
+            if(bil.steering > 0.7f)
+                bil.steering = 0.7f;
+            else if(bil.steering < -0.7f)
+                bil.steering = -0.7f;
 
         } else {
 
@@ -463,11 +463,11 @@ static int RespondToKeys()
 
         if(bil.helhet) {
             if(keys[SDL_SCANCODE_UP]) {
-                bil.engineForce += 40.0f;
+                bil.engineForce += 50.0f;
             } else if(keys[SDL_SCANCODE_DOWN]) {
-                bil.engineForce -= 40.0f;
+                bil.engineForce -= 50.0f;
             } else {
-                bil.engineForce *= 0.1f;
+                bil.engineForce *= 0.2f;
             }
 
             if(bil.engineForce > 1000.0f)
