@@ -3,7 +3,7 @@
 #include <linux/limits.h>
 #include <SDL.h>
 #include <SDL_image.h>
-#include <GL/gl.h>
+#include <GL/glew.h>
 #include <GL/glu.h>
 
 #include "gl.h"
@@ -201,9 +201,151 @@ int gl_drawscene()
     return 1;
 }
 
+static GLuint gl_new_shader(GLenum type, const char **source)
+{
+    GLuint name;
+
+    name = glCreateShader(type);
+
+    glShaderSource(name, 1, source, NULL);
+    glCompileShader(name);
+
+    GLint shader_ok;
+
+    glGetShaderiv(name, GL_COMPILE_STATUS, &shader_ok);
+
+    if(!shader_ok)
+    {
+        GLint logLength;
+        glGetShaderiv(name, GL_INFO_LOG_LENGTH, &logLength);
+        if (logLength > 0)
+        {
+            GLchar *log = (GLchar *)malloc(logLength);
+            glGetShaderInfoLog(name, logLength, &logLength, log);
+            printf("Error in Shader Creation:\n%s\n",log);
+            free(log);
+        }
+
+        glDeleteShader(name);
+
+        return 0;
+    }
+
+    return name;
+}
+
+GLuint gl_new_program(GLuint vertexShader, GLuint fragmentShader)
+{
+    GLuint name;
+
+    name = glCreateProgram();
+
+    glAttachShader(name, vertexShader);
+    glAttachShader(name, fragmentShader);
+
+    glLinkProgram(name);
+
+    GLint link_ok = 0;
+
+    glGetProgramiv(name, GL_LINK_STATUS, &link_ok);
+
+    if(!link_ok)
+    {
+        GLint logLength;
+        glGetProgramiv(name, GL_INFO_LOG_LENGTH, &logLength);
+        if (logLength > 0)
+        {
+            GLchar *log = (GLchar *)malloc(logLength);
+            glGetProgramInfoLog(name, logLength, &logLength, log);
+            printf("Error when linking program:\n%s\n",log);
+            free(log);
+        }
+
+        glDeleteProgram(name);
+
+        return 0;
+    }
+
+    return name;
+}
+
+GLchar *load_file_contents(const char *filename)
+{
+    FILE *file;
+    int sz;
+    size_t done;
+    char *data;
+
+    if( !(file = fopen(filename, "rb")) ) {
+        printf("Failed to open %s\n", filename);
+        return NULL;
+    }
+
+    fseek(file, 0L, SEEK_END);
+    sz = ftell(file);
+    fseek(file, 0L, SEEK_SET);
+
+    if( !(data = malloc(sizeof(char) * (sz+1))) ) {
+        printf("Out of memory.\n");
+        fclose(file);
+        return NULL;
+    }
+
+    done = fread(data, sizeof(char), sz, file);
+
+    fclose(file);
+
+    if( done != sz ) {
+        printf("Failed to load file %s (read %zu, expected %d)\n", filename, done, sz);
+        free(data);
+        return NULL;
+    }
+
+    data[sz] = '\0';
+
+    return data;
+}
+
+GLuint gl_new_program_from_files(const char *vfile, const char *ffile)
+{
+    char *vsrc = load_file_contents(vfile);
+    char *fsrc = load_file_contents(ffile);
+    GLuint vsh, fsh, program;
+
+    printf("Creating program from %s and %s...\n", vfile, ffile);
+
+    vsh = gl_new_shader(GL_VERTEX_SHADER, (const char**)&vsrc);
+    fsh = gl_new_shader(GL_FRAGMENT_SHADER, (const char**)&fsrc);
+
+    free(vsrc);
+    free(fsrc);
+
+    program = gl_new_program(vsh, fsh);
+
+    glDeleteShader(vsh);
+    glDeleteShader(fsh);
+
+    return program;
+}
+
+GLuint gl_new_buffer_object(GLenum type, GLsizeiptr size, const GLvoid *data)
+{
+    GLuint buffer;
+
+    glGenBuffers(1, &buffer);
+
+    glBindBuffer(type, buffer);
+    glBufferData(type, size, data, GL_STATIC_DRAW);
+
+    return buffer;
+}
+
+
 int gl_init(SDL_Window *window, int width, int height)
 {
     SDL_GL_CreateContext(window);
+
+    glewInit();
 
     if (!gl_loadtextures()) {
         printf("Bananeinar, det verkar inte som om den vill ladda texturerna.");
