@@ -2,31 +2,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 #include "main.h"
 #include "world.h"
 #include "car.h"
 #include "stl.h"
+#include "gl.h"
 #include "linmath.h"
 
 #define CARSIZE_X 3.0f
 #define CARSIZE_Y 5.0f
 #define CARSIZE_Z 2.0f
-
-static void draw_stl_model(struct stl_model *m) {
-    static const int stride = 3 + 3 + 2;
-
-    glBegin(GL_TRIANGLES);
-        int i;
-        for(i = 0; i < m->nr_of_vertices; i++) {
-            int offset = i*stride;
-            glTexCoord2f(m->data[offset+6], m->data[offset+7]);
-            glNormal3f(m->data[offset+3], m->data[offset+4], m->data[offset+5]);
-            glVertex3f(m->data[offset], m->data[offset+1], m->data[offset+2]);
-        }
-    glEnd();
-}
 
 static void car_get_world_transform(void *data, plVector3 v, plReal *m) {
     /* printf("get_world_transform (%p, %p, %p)\n", data, v, m); */
@@ -141,20 +128,68 @@ void car_render(struct car *bil) {
 
     glTranslatef(bil->o.x, bil->o.y, bil->o.z);
 
-    /* glRotatef((float)bil->o.angle,0.0f,0.0f,1.0f); */
     glMultMatrixf(bil->o.m_rotation);
 
-    glBindTexture(GL_TEXTURE_2D,world.texIDs[bil->t1]);
-    draw_stl_model(bil->model);
+    glUseProgram(bil->o.shader);
+
+    glBindBuffer(GL_ARRAY_BUFFER, bil->o.vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bil->o.vbo_indices);
+
+    GLint a_position = glGetAttribLocation(bil->o.shader, "a_position");
+    //GLint a_normal = glGetAttribLocation(bil->o.shader, "a_normal");
+    GLint a_texcoord = glGetAttribLocation(bil->o.shader, "a_texcoord");
+
+    GLint u_texture1 = glGetUniformLocation(bil->o.shader, "texture1");
+
+    glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (void*)0);
+    glEnableVertexAttribArray(a_position);
+    /* glVertexAttribPointer(a_normal, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (void*)(3*sizeof(GLfloat))); */
+    /* glEnableVertexAttribArray(a_normal); */
+    glVertexAttribPointer(a_texcoord, 2, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (void*)(6*sizeof(GLfloat)));
+    glEnableVertexAttribArray(a_texcoord);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, world.texIDs[bil->t1]);
+    glUniform1i(u_texture1, 0);
+
+    glDrawElements(GL_TRIANGLES, bil->o.nr_of_indices, GL_UNSIGNED_INT, (void*)0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    glUseProgram(0);
 
     glPopMatrix();
 }
 
 void car_set_model(struct car *bil) {
     static struct stl_model *car_model;
+    static GLuint vbo;
+    static GLuint vbo_indices;
+    static GLuint shader;
+    static GLuint nr_of_indices;
 
     if(car_model == NULL) {
         car_model = load_stl_model("data/gta2kcar.stl");
+
+        /* Just 1,2,3,.. */
+        nr_of_indices = car_model->nr_of_vertices;
+        GLuint *indices = malloc(nr_of_indices*sizeof(GLuint));
+        unsigned int i;
+        for(i = 0; i < nr_of_indices; i++) {
+            indices[i] = i;
+        }
+
+        vbo = gl_new_buffer_object(GL_ARRAY_BUFFER, car_model->nr_of_vertices*sizeof(GLfloat)*8, car_model->data);
+        vbo_indices = gl_new_buffer_object(GL_ELEMENT_ARRAY_BUFFER, nr_of_indices*sizeof(GLuint), indices);
+
+        shader = gl_new_program_from_files("data/shaders/default.vert", "data/shaders/default.frag");
+
+        free(indices);
     }
     bil->model = car_model;
+    bil->o.vbo = vbo;
+    bil->o.vbo_indices = vbo_indices;
+    bil->o.shader = shader;
+    bil->o.nr_of_indices = nr_of_indices;
 }

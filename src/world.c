@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 #include "Bullet-C-Api.h"
 #include "btwrap.h"

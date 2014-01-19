@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <GL/gl.h>
+#include <GL/glew.h>
 
 #include "gubbe.h"
 #include "main.h"

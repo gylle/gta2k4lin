@@ -36,7 +36,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-#include <GL/gl.h>			// Header File For The OpenGL32 Library
 #include <SDL.h>
 #include <sys/time.h>
 #include <sys/param.h>

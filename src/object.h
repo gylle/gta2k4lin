@@ -1,10 +1,15 @@
 #ifndef OBJECT_H
 #define OBJECT_H
 
+#include "glew.h"
 #include "linmath.h"
 
 struct object {
 	mat4x4 m_rotation;
+	GLuint vbo;
+	GLuint vbo_indices;
+	GLuint shader;
+	GLuint nr_of_indices;
 
 	union {
 		float x;
