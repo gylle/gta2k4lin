@@ -11,25 +11,18 @@
 #include "linmath.h"
 
 static const int gubbtid=300;		// Hur lång tid en gubbe är död... Räknas i frames :)
-static GLuint GubbeDispList = 0;
 
-static float gubbe_top_vertices[] = {
-    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
+static GLfloat gubbe_vertices[] = {
+    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 0.0f, /* Top */
     -GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
     GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 1.0f,
-    GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 0.0f
-};
-
-static float gubbe_bottom_vertices[] = {
-    GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 1.0f, 0.0f,
+    GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 1.0f, 0.0f,
+    GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 1.0f, 0.0f, /* Bottom */
     GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 1.0f, 1.0f,
     -GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
-    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f
-};
-
-static float gubbe_body_vertices[] = {
+    -GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
     /* Left */
-    -GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f,
+    -GUBBSIZE_X/2, GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f, 0.0f, 0.0f, /* Body */
     -GUBBSIZE_X/2, GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f, 0.0f, 1.0f,
     -GUBBSIZE_X/2, -GUBBSIZE_Y/2, GUBBSIZE_Z/2.0f,1.0f, 1.0f,
     -GUBBSIZE_X/2, -GUBBSIZE_Y/2, -GUBBSIZE_Z/2.0f,1.0f, 0.0f,
@@ -83,7 +76,10 @@ static void gubbe_set_world_transform(void *data, plVector3 v, plReal *m) {
     g->o.m_rotation[3][3] = 1.0f;
 }
 
+void gubbe_set_model(struct gubbe *g);
 void init_gubbe(struct gubbe *g) {
+    gubbe_set_model(g);
+
     g->alive=1;
 
     g->o.speed=0.0f;
@@ -124,49 +120,85 @@ void init_gubbe(struct gubbe *g) {
 
     plAddRigidBody(world.dynamics_world, g->bt_rbody);
     /* printf("Added gubbe-rbody %p\n", g->bt_rbody); */
-
-    if(GubbeDispList == 0) {
-        printf("Initializing gubbe-displaylist");
-
-        // Vi bygger en Display List!!! EJJJJ!!!(som i öj) :)
-        GubbeDispList = glGenLists(1);
-
-        glNewList(GubbeDispList,GL_COMPILE);
-            glBindTexture(GL_TEXTURE_2D,world.texIDs[g->ltexture2]);
-            draw_quads(gubbe_top_vertices, sizeof(gubbe_top_vertices)/(20*sizeof(float)));
-
-            glBindTexture(GL_TEXTURE_2D,world.texIDs[g->ltexture]);
-            draw_quads(gubbe_body_vertices, sizeof(gubbe_body_vertices)/(20*sizeof(float)));
-
-            glBindTexture(GL_TEXTURE_2D,world.texIDs[g->ltexture]);
-            draw_quads(gubbe_bottom_vertices, sizeof(gubbe_bottom_vertices)/(20*sizeof(float)));
-        glEndList();
-    }
 }
 
 void gubbe_render(struct gubbe *g) {
     glPushMatrix();
 
-    // HAHA!!! Det gick till slut! :)
     glTranslatef(g->o.x,g->o.y,g->o.z);
-    /* glRotatef((float)g->o.angle,0.0f,0.0f,1.0f); */
+
     glMultMatrixf(g->o.m_rotation);
 
-    if(g->alive) {
-        /* if(!NoBlend) */
-        /*     glEnable(GL_BLEND); */
+    glUseProgram(g->o.shader);
 
-        glColor4f(1.0f,1.0f,1.0f,1.0f);
-        glCallList(GubbeDispList);
+    glBindBuffer(GL_ARRAY_BUFFER, g->o.vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, g->o.vbo_indices);
 
-        /* if(blendcolor==0.0f) */
-        /*     glDisable(GL_BLEND); */
-    } else {
-        // Är man överkörd står man nog inte upp längre... :) Det här blir bättre...
-        glBindTexture(GL_TEXTURE_2D,world.texIDs[g->dtexture]);
+    GLint a_position = glGetAttribLocation(g->o.shader, "a_position");
+    //GLint a_normal = glGetAttribLocation(g->o.shader, "a_normal");
+    GLint a_texcoord = glGetAttribLocation(g->o.shader, "a_texcoord");
 
-        glTranslatef(0.0f, 0.0f, -GUBBSIZE_Z+0.01f);
-        draw_quads(gubbe_top_vertices, sizeof(gubbe_top_vertices)/(20*sizeof(float)));
-    }
+    GLint u_texture1 = glGetUniformLocation(g->o.shader, "texture1");
+
+    GLuint stride = 5*sizeof(GLfloat);
+    glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+    glEnableVertexAttribArray(a_position);
+    /* glVertexAttribPointer(a_normal, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3*sizeof(GLfloat))); */
+    /* glEnableVertexAttribArray(a_normal); */
+    glVertexAttribPointer(a_texcoord, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3*sizeof(GLfloat)));
+    glEnableVertexAttribArray(a_texcoord);
+
+    glActiveTexture(GL_TEXTURE0);
+    /* glBindTexture(GL_TEXTURE_2D, world.texIDs[g->ltexture2]); */
+    glBindTexture(GL_TEXTURE_2D, world.texIDs[13]);
+    glUniform1i(u_texture1, 0);
+
+    glDrawElements(GL_TRIANGLES, g->o.nr_of_indices, GL_UNSIGNED_INT, (void*)0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    glUseProgram(0);
+
     glPopMatrix();
+}
+
+void gubbe_set_model(struct gubbe *g) {
+    static GLuint vbo = -1;
+    static GLuint vbo_indices;
+    static GLuint shader;
+    static GLuint nr_of_indices;
+
+    if(vbo == -1) {
+        GLuint stride = 5*sizeof(GLfloat);
+        GLuint nr_of_vertices = sizeof(gubbe_vertices)/stride;
+
+        nr_of_indices = (nr_of_vertices/4)*6;
+        GLuint *indices = malloc(nr_of_indices * sizeof(GLuint));
+
+        /* We make a couple of triangles from each quad */
+        unsigned int i, j;
+        for(i = 0, j = 0; i < nr_of_indices; i += 6, j += 4) {
+            indices[i] = j;
+            indices[i+1] = j+1;
+            indices[i+2] = j+2;
+
+            indices[i+3] = j;
+            indices[i+4] = j+2;
+            indices[i+5] = j+3;
+
+            printf("i/j: [%d, %d] -> (%d, %d, %d),(%d, %d, %d)", i,j, j, j+1, j+2, j, j+2, j+3);
+        }
+
+        vbo = gl_new_buffer_object(GL_ARRAY_BUFFER, nr_of_vertices*sizeof(GLfloat)*5, gubbe_vertices);
+        vbo_indices = gl_new_buffer_object(GL_ELEMENT_ARRAY_BUFFER, nr_of_indices*sizeof(GLuint), indices);
+
+        shader = gl_new_program_from_files("data/shaders/default.vert", "data/shaders/default.frag");
+
+        free(indices);
+    }
+    g->o.vbo = vbo;
+    g->o.vbo_indices = vbo_indices;
+    g->o.shader = shader;
+    g->o.nr_of_indices = nr_of_indices;
 }
