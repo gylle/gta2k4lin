@@ -33,6 +33,11 @@ struct map {
     int nrcubey;
     int nrcubez;
     struct cube *cubes;
+
+    /* FIXME: Using this only to store
+     * rendering stuff
+     */
+    struct object r_o;
 };
 
 struct world {
@@ -56,6 +61,7 @@ struct world {
 extern struct world world;
 
 int world_init();
+void map_draw();
 void camera_move_for_car(struct car *car);
 
 #endif

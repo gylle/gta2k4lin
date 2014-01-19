@@ -7,6 +7,8 @@
 #include "Bullet-C-Api.h"
 #include "btwrap.h"
 
+#include "gl.h"
+#include "models.h"
 #include "world.h"
 
 struct world world;
@@ -119,7 +121,96 @@ int map_load() {
         }
     }
 
+    /* Load some graphics stuff */
+    GLuint vbo = -1;
+    GLuint vbo_indices;
+    GLuint shader;
+    GLuint nr_of_indices;
+
+    if(vbo == -1) {
+        GLuint stride = 5*sizeof(GLfloat);
+        GLuint nr_of_vertices = sizeof(map_cube_vertices)/stride;
+
+        nr_of_indices = (nr_of_vertices/4)*6;
+        GLuint *indices = malloc(nr_of_indices * sizeof(GLuint));
+
+        /* We make a couple of triangles from each quad */
+        unsigned int i, j;
+        for(i = 0, j = 0; i < nr_of_indices; i += 6, j += 4) {
+            indices[i] = j;
+            indices[i+1] = j+1;
+            indices[i+2] = j+2;
+
+            indices[i+3] = j;
+            indices[i+4] = j+2;
+            indices[i+5] = j+3;
+
+            printf("i/j: [%d, %d] -> (%d, %d, %d),(%d, %d, %d)", i,j, j, j+1, j+2, j, j+2, j+3);
+        }
+
+        vbo = gl_new_buffer_object(GL_ARRAY_BUFFER, nr_of_vertices*sizeof(GLfloat)*5, map_cube_vertices);
+        vbo_indices = gl_new_buffer_object(GL_ELEMENT_ARRAY_BUFFER, nr_of_indices*sizeof(GLuint), indices);
+
+        shader = gl_new_program_from_files("data/shaders/default.vert", "data/shaders/default.frag");
+
+        free(indices);
+    }
+    world.map.r_o.vbo = vbo;
+    world.map.r_o.vbo_indices = vbo_indices;
+    world.map.r_o.shader = shader;
+    world.map.r_o.nr_of_indices = nr_of_indices;
+
     return 1;
+}
+
+void map_draw() {
+    int x, y, z;
+
+    glUseProgram(world.map.r_o.shader);
+
+    glBindBuffer(GL_ARRAY_BUFFER, world.map.r_o.vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, world.map.r_o.vbo_indices);
+
+    GLint a_position = glGetAttribLocation(world.map.r_o.shader, "a_position");
+    //GLint a_normal = glGetAttribLocation(world.map.r_o.shader, "a_normal");
+    GLint a_texcoord = glGetAttribLocation(world.map.r_o.shader, "a_texcoord");
+
+    GLint u_texture1 = glGetUniformLocation(world.map.r_o.shader, "texture1");
+
+    GLuint stride = 5*sizeof(GLfloat);
+    glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+    glEnableVertexAttribArray(a_position);
+    /* glVertexAttribPointer(a_normal, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3*sizeof(GLfloat))); */
+    /* glEnableVertexAttribArray(a_normal); */
+    glVertexAttribPointer(a_texcoord, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3*sizeof(GLfloat)));
+    glEnableVertexAttribArray(a_texcoord);
+
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(u_texture1, 0);
+
+    float x_pos, y_pos, z_pos;
+    for(x=0; x<world.map.nrcubex; x++) {
+        for(y=0; y<world.map.nrcubey; y++) {
+            for(z=0; z<world.map.nrcubez; z++) {
+                x_pos = map_cube(world, x, y, z).o.x;
+                y_pos = map_cube(world, x, y, z).o.y;
+                z_pos = map_cube(world, x, y, z).o.z;
+
+                glPushMatrix();
+                glTranslatef(x_pos, y_pos, z_pos);
+
+                glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, x, y, z).texturenr]);
+                glDrawElements(GL_TRIANGLES, world.map.r_o.nr_of_indices, GL_UNSIGNED_INT, (void*)0);
+
+                glPopMatrix();
+            }
+        }
+    }
+
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    glUseProgram(0);
 }
 
 void camera_init() {

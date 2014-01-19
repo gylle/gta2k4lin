@@ -12,7 +12,6 @@
 #include "hud.h"
 #include "gubbe.h"
 #include "car.h"
-#include "models.h"
 #include "world.h"
 
 #define TEXTURE_PATH "data/"
@@ -148,32 +147,7 @@ int gl_drawscene()
 
     glColor4f(1.0f,1.0f,1.0f,blendcolor);
 
-    int loop1, loop2, loop3;
-
-    // Ritar upp banan -----------------------------
-    float lp1bstmp,lp2bstmp,ztmp;
-    for(loop1=0; loop1<world.map.nrcubex; loop1++) {
-        for(loop2=0; loop2<world.map.nrcubey; loop2++) {
-            for(loop3=0; loop3<world.map.nrcubez; loop3++) {
-
-
-                lp1bstmp=(float)loop1*(BSIZE*2);
-                lp2bstmp=(float)loop2*(BSIZE*2);
-                ztmp=map_cube(world, loop1, loop2, loop3).o.z;
-
-                glPushMatrix();
-                glTranslatef(lp1bstmp, lp2bstmp, ztmp);
-
-                glEnable(GL_TEXTURE_2D);
-                glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, loop1, loop2, loop3).texturenr]);
-
-                draw_quads(map_cube_vertices, sizeof(map_cube_vertices)/(20*sizeof(float)));
-
-                glPopMatrix();
-            }
-        }
-    }
-
+    map_draw();
 
     car_render(&world.bil);
     if (Network) {
@@ -184,19 +158,14 @@ int gl_drawscene()
     }
 
     if(!Network) {
-        for(loop1=0;loop1<nrgubbar;loop1++) {
-            gubbe_render(&world.gubbar[loop1]);
+        int i;
+        for(i=0; i<nrgubbar; i++) {
+            gubbe_render(&world.gubbar[i]);
         }
 
     }
 
-    hud_set_damage(world.bil.helhet);
-
-    if(!Network) {
-        hud_set_score(world.player.runovers);
-    } else {
-        /* TODO */
-    }
+    hud_render();
 
     return 1;
 }

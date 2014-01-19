@@ -461,8 +461,15 @@ int main(int argc, char *argv[])
 
                 camera_move_for_car(&world.bil);
 
+                hud_set_damage(world.bil.helhet);
+
+                if(!Network) {
+                    hud_set_score(world.player.runovers);
+                } else {
+                    /* TODO */
+                }
+
 		gl_drawscene();
-                hud_render();
 		SDL_GL_SwapWindow(window);
 
 		if (Network) {
