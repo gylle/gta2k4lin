@@ -123,12 +123,6 @@ void init_gubbe(struct gubbe *g) {
 }
 
 void gubbe_render(struct gubbe *g) {
-    glPushMatrix();
-
-    glTranslatef(g->o.x,g->o.y,g->o.z);
-
-    glMultMatrixf(g->o.m_rotation);
-
     glUseProgram(g->o.shader);
 
     glBindBuffer(GL_ARRAY_BUFFER, g->o.vbo);
@@ -138,7 +132,18 @@ void gubbe_render(struct gubbe *g) {
     //GLint a_normal = glGetAttribLocation(g->o.shader, "a_normal");
     GLint a_texcoord = glGetAttribLocation(g->o.shader, "a_texcoord");
 
+    GLint u_modelView = glGetUniformLocation(g->o.shader, "u_modelView");
+    GLint u_projection = glGetUniformLocation(g->o.shader, "u_projection");
     GLint u_texture1 = glGetUniformLocation(g->o.shader, "texture1");
+
+    glUniformMatrix4fv(u_projection, 1, 0, (GLfloat*)world.camera.projection);
+
+    /* FIXME */
+    mat4x4 modelView;
+    mat4x4_translate(g->o.m_translation, g->o.x, g->o.y, g->o.z);
+    mat4x4_mul(g->o.m_translationRotation, g->o.m_translation, g->o.m_rotation);
+    mat4x4_mul(modelView, world.camera.view, g->o.m_translationRotation);
+    glUniformMatrix4fv(u_modelView, 1, 0, (GLfloat*)modelView);
 
     GLuint stride = 5*sizeof(GLfloat);
     glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
@@ -159,8 +164,6 @@ void gubbe_render(struct gubbe *g) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     glUseProgram(0);
-
-    glPopMatrix();
 }
 
 void gubbe_set_model(struct gubbe *g) {

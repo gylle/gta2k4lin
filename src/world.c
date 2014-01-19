@@ -108,15 +108,22 @@ int map_load() {
                 cube_shape = plNewBoxShape(BSIZE, BSIZE, BSIZE);
                 cube_rbody = plCreateRigidBody(user_data, 0.0f, cube_shape);
 
+                struct object *cube_object = &map_cube(world, loop1, loop2, loop3).o;
+
                 float cube_pos[3];
-                cube_pos[0] = map_cube(world, loop1, loop2, loop3).o.x;
-                cube_pos[1] = map_cube(world, loop1, loop2, loop3).o.y;
-                cube_pos[2] = map_cube(world, loop1, loop2, loop3).o.z;
+                cube_pos[0] = cube_object->x;
+                cube_pos[1] = cube_object->y;
+                cube_pos[2] = cube_object->z;
 
                 /* plVector3 == float[3] */
                 plSetPosition(cube_rbody, cube_pos);
 
                 plAddRigidBody(world.dynamics_world, cube_rbody);
+
+                /* Update the model matrix */
+                mat4x4_identity(cube_object->m_rotation);
+                mat4x4_translate(cube_object->m_translation, cube_object->x, cube_object->y, cube_object->z);
+                mat4x4_mul(cube_object->m_translationRotation, cube_object->m_translation, cube_object->m_rotation);
             }
         }
     }
@@ -175,7 +182,11 @@ void map_draw() {
     //GLint a_normal = glGetAttribLocation(world.map.r_o.shader, "a_normal");
     GLint a_texcoord = glGetAttribLocation(world.map.r_o.shader, "a_texcoord");
 
+    GLint u_modelView = glGetUniformLocation(world.map.r_o.shader, "u_modelView");
+    GLint u_projection = glGetUniformLocation(world.map.r_o.shader, "u_projection");
     GLint u_texture1 = glGetUniformLocation(world.map.r_o.shader, "texture1");
+
+    glUniformMatrix4fv(u_projection, 1, 0, (GLfloat*)world.camera.projection);
 
     GLuint stride = 5*sizeof(GLfloat);
     glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
@@ -188,21 +199,19 @@ void map_draw() {
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(u_texture1, 0);
 
-    float x_pos, y_pos, z_pos;
+    /* float x_pos, y_pos, z_pos; */
     for(x=0; x<world.map.nrcubex; x++) {
         for(y=0; y<world.map.nrcubey; y++) {
             for(z=0; z<world.map.nrcubez; z++) {
-                x_pos = map_cube(world, x, y, z).o.x;
-                y_pos = map_cube(world, x, y, z).o.y;
-                z_pos = map_cube(world, x, y, z).o.z;
 
-                glPushMatrix();
-                glTranslatef(x_pos, y_pos, z_pos);
+                struct object *cube_object = &map_cube(world, x, y, z).o;
+
+                mat4x4 modelView;
+                mat4x4_mul(modelView, world.camera.view, cube_object->m_translationRotation);
+                glUniformMatrix4fv(u_modelView, 1, 0, (GLfloat*)modelView);
 
                 glBindTexture(GL_TEXTURE_2D,world.texIDs[map_cube(world, x, y, z).texturenr]);
                 glDrawElements(GL_TRIANGLES, world.map.r_o.nr_of_indices, GL_UNSIGNED_INT, (void*)0);
-
-                glPopMatrix();
             }
         }
     }

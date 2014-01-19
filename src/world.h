@@ -5,6 +5,7 @@
 #include "gubbe.h"
 #include "car.h"
 #include "network.h"
+#include "linmath.h"
 
 #define BSIZE 5.0f
 #define nrgubbar 100
@@ -13,6 +14,9 @@
 struct camera {
     GLfloat x, y, z;
     GLfloat SpeedVar;
+
+    mat4x4 projection;
+    mat4x4 view;
 };
 
 struct spelare {

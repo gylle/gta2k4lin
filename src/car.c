@@ -123,13 +123,6 @@ void init_car(struct car *bil) {
 }
 
 void car_render(struct car *bil) {
-
-    glPushMatrix();
-
-    glTranslatef(bil->o.x, bil->o.y, bil->o.z);
-
-    glMultMatrixf(bil->o.m_rotation);
-
     glUseProgram(bil->o.shader);
 
     glBindBuffer(GL_ARRAY_BUFFER, bil->o.vbo);
@@ -139,7 +132,18 @@ void car_render(struct car *bil) {
     //GLint a_normal = glGetAttribLocation(bil->o.shader, "a_normal");
     GLint a_texcoord = glGetAttribLocation(bil->o.shader, "a_texcoord");
 
+    GLint u_modelView = glGetUniformLocation(bil->o.shader, "u_modelView");
+    GLint u_projection = glGetUniformLocation(bil->o.shader, "u_projection");
     GLint u_texture1 = glGetUniformLocation(bil->o.shader, "texture1");
+
+    glUniformMatrix4fv(u_projection, 1, 0, (GLfloat*)world.camera.projection);
+
+    /* FIXME */
+    mat4x4 modelView;
+    mat4x4_translate(bil->o.m_translation, bil->o.x, bil->o.y, bil->o.z);
+    mat4x4_mul(bil->o.m_translationRotation, bil->o.m_translation, bil->o.m_rotation);
+    mat4x4_mul(modelView, world.camera.view, bil->o.m_translationRotation);
+    glUniformMatrix4fv(u_modelView, 1, 0, (GLfloat*)modelView);
 
     glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), (void*)0);
     glEnableVertexAttribArray(a_position);
@@ -158,8 +162,6 @@ void car_render(struct car *bil) {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     glUseProgram(0);
-
-    glPopMatrix();
 }
 
 void car_set_model(struct car *bil) {

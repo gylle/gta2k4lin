@@ -6,6 +6,9 @@
 
 struct object {
 	mat4x4 m_rotation;
+	mat4x4 m_translation;
+	mat4x4 m_translationRotation;
+
 	GLuint vbo;
 	GLuint vbo_indices;
 	GLuint shader;

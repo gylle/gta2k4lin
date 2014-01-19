@@ -13,8 +13,10 @@
 #include "gubbe.h"
 #include "car.h"
 #include "world.h"
+#include "linmath.h"
 
 #define TEXTURE_PATH "data/"
+#define PI 3.14159
 
 /* FIXME: Move somewhere */
 static const char *texture_filenames[] = {
@@ -58,15 +60,8 @@ void gl_resize(int width, int height) {
     /* Setup our viewport. */
     glViewport( 0, 0, width, height );
 
-    /*
-     * Change to the projection matrix and set
-     * our viewing volume.
-     */
-    glMatrixMode( GL_PROJECTION );
-    glLoadIdentity( );
-    gluPerspective( 60.0, ratio, 1.0, 1024.0 );
-
-    glMatrixMode( GL_MODELVIEW );
+    /* Recreate the perspective matrix */
+    mat4x4_perspective(world.camera.projection, (60.0/360.0)*(2*PI), ratio, 1.0, 1024);
 }
 
 
@@ -136,9 +131,8 @@ int gl_drawscene()
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
-    /* Set camera position (by translating the world in the opposite direction */
-    glLoadIdentity();
-    glTranslatef(-world.camera.x,-world.camera.y,world.camera.z+world.camera.SpeedVar);
+    /* Update view matrix from our camera position */
+    mat4x4_translate(world.camera.view, -world.camera.x,-world.camera.y,world.camera.z+world.camera.SpeedVar);
 
     if(blendcolor>0.0f)
         glEnable(GL_BLEND);
