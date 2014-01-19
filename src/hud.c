@@ -23,12 +23,13 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include <GL/gl.h>
+#include <glew.h>
 
 #include <SDL.h>
 #include <SDL_ttf.h>
 
 #include "hud.h"
+#include "gl.h"
 
 #define HUD_IMAGE_W  1024
 #define HUD_IMAGE_H  1024
@@ -208,17 +209,65 @@ static void finalize_hud() {
 
 }
 
+
 void hud_render() {
     finalize_hud();
 
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
+    static GLuint vbo;
+    static GLuint vbo_indices;
+    static GLuint shader;
+    static GLuint nr_of_indices;
 
-    glEnable(GL_TEXTURE_2D);
+    static GLint a_position;
+    static GLint a_texcoord;
+    static GLint u_texture1;
+
+    if(nr_of_indices == 0) {
+        const float hud_min_w = -1, hud_max_w = 1;
+        const float hud_min_h = -1, hud_max_h = 1;
+        const GLfloat hud_vertices[] = {
+            hud_min_w, hud_max_h, 0.0f, 0.0f, 0.0f,
+            hud_max_w, hud_max_h, 0.0f, 1.0f, 0.0f,
+            hud_max_w, hud_min_h, 0.0f, 1.0f, 1.0f,
+
+            hud_min_w, hud_max_h, 0.0f, 0.0f, 0.0f,
+            hud_max_w, hud_min_h, 0.0f, 1.0f, 1.0f,
+            hud_min_w, hud_min_h, 0.0f, 0.0f, 1.0f
+        };
+
+        nr_of_indices = sizeof(hud_vertices)/(sizeof(GLfloat)*5);
+        GLuint *indices = malloc(nr_of_indices*sizeof(GLuint));
+        int i;
+        for(i = 0; i < nr_of_indices; i++) {
+            indices[i] = i;
+        }
+
+        vbo = gl_new_buffer_object(GL_ARRAY_BUFFER, sizeof(hud_vertices), hud_vertices);
+        vbo_indices = gl_new_buffer_object(GL_ELEMENT_ARRAY_BUFFER, nr_of_indices*sizeof(GLuint), indices);
+
+        shader = gl_new_program_from_files("data/shaders/hud.vert", "data/shaders/hud.frag");
+
+        free(indices);
+
+        a_position = glGetAttribLocation(shader, "a_position");
+        a_texcoord = glGetAttribLocation(shader, "a_texcoord");
+        u_texture1 = glGetUniformLocation(shader, "texture1");
+    }
+
+    glUseProgram(shader);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo_indices);
+
+    GLuint stride = 5*sizeof(GLfloat);
+    glVertexAttribPointer(a_position, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
+    glEnableVertexAttribArray(a_position);
+    glVertexAttribPointer(a_texcoord, 2, GL_FLOAT, GL_FALSE, stride, (void*)(3*sizeof(GLfloat)));
+    glEnableVertexAttribArray(a_texcoord);
+
+    glActiveTexture(GL_TEXTURE0);
+    glUniform1i(u_texture1, 0);
+
     glBindTexture(GL_TEXTURE_2D, hud_data->texture);
     glTexImage2D(GL_TEXTURE_2D, 0, 4,
                  hud_data->surface->w, hud_data->surface->h, 0,
@@ -228,30 +277,13 @@ void hud_render() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
     glEnable(GL_BLEND);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, hud_data->texture);
-    glColor3f(1.0f, 1.0f, 1.0f);
+    glDrawElements(GL_TRIANGLES, nr_of_indices, GL_UNSIGNED_INT, (void*)0);
+    glDisable(GL_BLEND);
 
-    static float hud_min_w = -1, hud_max_w = 1;
-    static float hud_min_h = -1, hud_max_h = 1;
-    glBegin(GL_QUADS);
-        glTexCoord2f(0.0f, 0.0f);
-        glVertex3f(hud_min_w,hud_max_h,0.0f);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
-        glTexCoord2f(1.0f, 0.0f);
-        glVertex3f(hud_max_w,hud_max_h,0.0f);
-
-        glTexCoord2f(1.0f, 1.0f);
-        glVertex3f(hud_max_w,hud_min_h,0.0f);
-
-        glTexCoord2f(0.0f, 1.0f);
-        glVertex3f(hud_min_w,hud_min_h,0.0f);
-    glEnd();
-
-    glPopMatrix();
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
+    glUseProgram(0);
 
     hud_clear();
 }

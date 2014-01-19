@@ -347,6 +347,8 @@ int gl_init(SDL_Window *window, int width, int height)
     glBlendFunc(GL_SRC_ALPHA,GL_ONE);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);      // Really Nice Perspective Calculations
 
+    glEnable(GL_TEXTURE_2D);
+
     gl_resize(width, height);
 
     return 1;                                                                               // Initialization Went OK
