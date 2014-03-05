@@ -1,4 +1,4 @@
-#version 100
+#version 120
 
 uniform mat4 u_modelView;
 uniform mat4 u_projection;
