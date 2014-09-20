@@ -10,3 +10,13 @@ code will be of very low quality and, let's say, somewhat
 immature. While some of it has been cleaned up and amended recently,
 there's basically no reason why anyone would like to download or look
 at most of this.
+
+Dependencies
+------------
+
+Incomplete list from compiling under Ubuntu 14.04:
+* libglew-dev
+* libsdl2-dev
+* libsdl2-image-dev
+* libsdl2-mixer-dev
+* libbullet-dev

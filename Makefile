@@ -1,14 +1,13 @@
 TARGETS=gta2k4lin
 
-BULLETSRC=bullet/src
-
 C_SOURCES=src/main.c src/world.c src/gl.c src/sound.c src/network.c src/hud.c src/lmq.c src/object.c src/stl.c src/car.c src/gubbe.c src/console.c
 CXX_SOURCES=src/btwrap.cpp
 
 CC=gcc
 CXX=g++
 
-LIBRARIES=sdl2 glew glu x11 SDL2_image
+LIBRARIES=sdl2 glew glu x11 SDL2_image bullet
+LIBS_EXTRA=-lm -lpthread
 
 ifeq ($(shell sh -c 'pkg-config --libs SDL2_mixer 2>/dev/null'),)
 	LIBS_EXTRA+=-lSDL2_mixer
@@ -22,12 +21,9 @@ else
 	LIBRARIES+= SDL2_ttf
 endif
 
-# LIBS_EXTRA+=$(BULLETSRC)/.libs/libBulletDynamics.so $(BULLETSRC)/.libs/libBulletCollision.so $(BULLETSRC)/.libs/libLinearMath.so
-LIBS_EXTRA+=$(BULLETSRC)/.libs/libBulletDynamics.a $(BULLETSRC)/.libs/libBulletCollision.a $(BULLETSRC)/.libs/libLinearMath.a
-
 LIBS=$(shell pkg-config --libs $(LIBRARIES)) $(LIBS_EXTRA)
 
-CFLAGS=-O2 -Wall -I./src -I$(BULLETSRC) $(shell pkg-config --cflags $(LIBRARIES)) -lm -lpthread -g
+CFLAGS=-O2 -Wall -I./src $(shell pkg-config --cflags $(LIBRARIES)) -g
 
 CXXFLAGS=$(CFLAGS) -fno-exceptions -fno-rtti -fno-check-new -Wwrite-strings -fpermissive
 
