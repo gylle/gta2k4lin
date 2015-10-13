@@ -7,7 +7,7 @@ CC=gcc
 CXX=g++
 
 LIBRARIES=sdl2 glew glu x11 SDL2_image bullet
-LIBS_EXTRA=-lm -lpthread
+LIBS_EXTRA=-lm -pthread
 
 ifeq ($(shell sh -c 'pkg-config --libs SDL2_mixer 2>/dev/null'),)
 	LIBS_EXTRA+=-lSDL2_mixer
